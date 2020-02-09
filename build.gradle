@@ -5,7 +5,7 @@ plugins {
 apply from: './release.gradle'
 
 group 'com.github.pjozsef'
-version '0.0.1'
+version "git describe".execute().text.trim()
 
 repositories {
     jcenter()
