@@ -1,4 +1,5 @@
 apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 task sourcesJar(type: Jar, dependsOn: project.classes) {
     classifier = 'sources'
@@ -20,5 +21,18 @@ publishing {
             artifact sourcesJar
             artifact javadocJar
         }
+    }
+}
+
+bintray {
+    user = System.getenv('BINTRAY_USER')
+    key = System.getenv('BINTRAY_KEY')
+    publications = [project.name]
+    publish = true
+    pkg {
+        repo = 'libs'
+        name = project.name
+        vcsUrl = 'https://github.com/pjozsef/RandomTree.git'
+        licenses = ['MIT']
     }
 }
