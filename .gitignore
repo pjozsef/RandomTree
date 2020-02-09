@@ -1,2 +1,4 @@
 .kotlintest
 .idea
+build
+.gradle
