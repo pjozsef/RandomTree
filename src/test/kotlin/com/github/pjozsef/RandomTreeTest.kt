@@ -1,5 +1,8 @@
 package com.github.pjozsef
 
+import com.github.pjozsef.factory.c
+import com.github.pjozsef.factory.l
+import com.github.pjozsef.factory.r
 import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.FreeSpec
@@ -64,10 +67,3 @@ class RandomTreeTest : FreeSpec({
     }
 })
 
-private fun <T> l(value: T) = Leaf(value)
-
-private fun <C, T> c(components: List<RandomTree<C>>, combiner: (List<C>) -> T) =
-    CompositeNode(components, combiner)
-
-private fun <T> r(weights: List<Number>, branches: List<RandomTree<T>>, random: Random) =
-    RandomNode(weights, branches, random)
