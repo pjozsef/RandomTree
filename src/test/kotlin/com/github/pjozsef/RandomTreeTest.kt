@@ -17,12 +17,12 @@ class RandomTreeTest : FreeSpec({
             row(l("value"), "value"),
             row(
                 c(
-                    listOf(
-                        l("a"),
-                        l("b"),
-                        l("c")
+                    sortedMapOf(
+                        "1" to l("a"),
+                        "2" to l("b"),
+                        "3" to l("c")
                     )
-                ) { it.joinToString(" ") }, "a b c"
+                ) { it.map { (k,v)-> "$k=$v" }.joinToString(", ") }, "1=a, 2=b, 3=c"
             ),
             row(
                 r(
