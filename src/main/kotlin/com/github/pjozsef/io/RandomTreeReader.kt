@@ -27,7 +27,14 @@ fun <C, T> readTreeFromString(
             is ObjectNode -> if (value.isEmpty) {
                 key mappedTo readEmptyNode(key, mapper)
             } else {
-                key mappedTo readCompositeNode(value, mapper, combiner, componentMappers.getValue(key), componentMappers, random)
+                key mappedTo readCompositeNode(
+                    value,
+                    mapper,
+                    combiner,
+                    componentMappers.getValue(key),
+                    componentMappers,
+                    random
+                )
             }
             else -> error("Unsupported type for root: ${value::class.java}")
         }
@@ -49,7 +56,7 @@ private fun <C, T> readRandomNode(
             is ObjectNode -> {
                 val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
                 val (nestedWeight, nestedName) = extractValuesFrom(nestedKey)
-                when(nestedValue){
+                when (nestedValue) {
                     is ArrayNode -> {
                         val randomNode = readRandomNode(
                             nestedValue,
@@ -91,7 +98,21 @@ private fun <C, T> readCompositeNode(
 ): RandomTree<T> =
     value.fields().asSequence().map { (elementKey, elementValue) ->
         when (elementValue) {
-            is ArrayNode -> elementKey to readRandomNode(elementValue, componentMapper.getValue(elementKey), combiner, componentMappers, random) as RandomTree<C>
+            is ArrayNode -> elementKey to readRandomNode(
+                elementValue,
+                componentMapper.getValue(elementKey),
+                combiner,
+                componentMappers,
+                random
+            ) as RandomTree<C>
+            is ObjectNode -> elementKey to readCompositeNode(
+                elementValue,
+                componentMapper.getValue(elementKey),
+                combiner,
+                componentMappers.getValue(elementKey),
+                componentMappers,
+                random
+            ) as RandomTree<C>
             else -> error("Unsupported type for CompositeNode: ${elementValue::class.java}")
         }
     }.toMap().let {

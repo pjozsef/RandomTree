@@ -95,8 +95,8 @@ class RandomTreeReaderKtTest : FreeSpec({
         "compositeNode with randomNodes" {
             val componentMappers = mapOf(
                 "composite" to mapOf(
-                    "part1" to { it: String -> it+"_part1" },
-                    "part2" to { it: String -> it+"_part2" }
+                    "part1" to { it: String -> it + "_part1" },
+                    "part2" to { it: String -> it + "_part2" }
                 )
             )
             val input = """
@@ -141,8 +141,8 @@ class RandomTreeReaderKtTest : FreeSpec({
         "compositeNode with randomNodes does not split name by weight" {
             val componentMappers = mapOf(
                 "composite" to mapOf(
-                    "1_part" to { it: String -> it+"_from_1_part" },
-                    "2_part" to { it: String -> it+"_from_2_part" }
+                    "1_part" to { it: String -> it + "_from_1_part" },
+                    "2_part" to { it: String -> it + "_from_2_part" }
                 )
             )
             val input = """
@@ -212,15 +212,15 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             val expected = mapOf(
                 "root" to r(
-                    listOf(3,1,4, 1),
+                    listOf(3, 1, 4, 1),
                     listOf(
                         r(
-                            listOf(1,1,1),
-                            listOf(l("a"),l("aa"),l("aaa")),
+                            listOf(1, 1, 1),
+                            listOf(l("a"), l("aa"), l("aaa")),
                             random
                         ),
                         r(
-                            listOf(1,5),
+                            listOf(1, 5),
                             listOf(l("b"), l("bb")),
                             random
                         ),
@@ -255,5 +255,68 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             actual shouldBe expected
         }
+    }
+    "fcompositeTree with deeply nested branches" {
+        val componentMappers = mapOf(
+            "compositeRoot" to mapOf(
+                "innerComposite" to { it: String -> it },
+                "innerBranch" to { it: String -> it }
+            ),
+            "innerComposite" to mapOf(
+                "first" to { it: String -> it },
+                "second" to { it: String -> it }
+            )
+        )
+        val input = """
+                compositeRoot:
+                    innerComposite:
+                        first:
+                            - x
+                            - 3 y
+                        second:
+                            - z
+                            - w
+                    innerBranch:
+                        - 2 value1
+                        - value2
+            """.trimIndent()
+
+        val expected = mapOf(
+            "compositeRoot" to c(
+                mapOf(
+                    "innerComposite" to c(
+                        mapOf(
+                            "first" to r(
+                                listOf(1, 3),
+                                listOf(l("x"), l("y")),
+                                random
+                            ),
+                            "second" to r(
+                                listOf(1, 1),
+                                listOf(l("z"), l("w")),
+                                random
+                            )
+                        ),
+                        emptyCombiner
+                    ),
+                    "innerBranch" to r(
+                        listOf(2, 1),
+                        listOf(l("value1"), l("value2")),
+                        random
+                    )
+                ),
+                emptyCombiner
+            )
+        )
+
+        val actual = readTreeFromString(
+            input,
+            emptyCombiner,
+            { it },
+            random,
+            componentMappers
+        )
+
+        actual shouldBe expected
     }
 })
