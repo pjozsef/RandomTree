@@ -269,4 +269,81 @@ class RandomTreeReaderKtTest : FreeSpec({
 
         actual shouldBe expected
     }
+
+    "compositeTree with degenerate leaf components" {
+        val input = """
+            root:
+                c1: leaf1
+                c2: leaf2
+                c3: leaf3
+        """.trimIndent()
+
+        val expected = mapOf(
+            "root" to c(
+                mapOf(
+                    "c1" to l("leaf1"),
+                    "c2" to l("leaf2"),
+                    "c3" to l("leaf3")
+                ),
+                concatCombiner
+            )
+        )
+
+        val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+        actual shouldBe expected
+    }
+
+    "randomTree with backreferences to previous nodes at root" {
+        val input = """
+            refLeaf: {}
+            refRandomTree:
+                - a
+                - 3 :refLeaf
+            refCompositeTree:
+                p1: :refRandomTree
+                p2: :refLeaf
+                p3:
+                    - 1
+                    - 2
+            root:
+                - :refLeaf
+                - 5 :refRandomTree
+                - :refCompositeTree
+                - refCompositeTree
+            """.trimIndent()
+
+        val refLeaf = l("refLeaf")
+        val refRandomTree = r(
+            listOf(1, 3),
+            listOf(l("a"), refLeaf),
+            random
+        )
+        val refCompositeTree = c(
+            mapOf(
+                "p1" to refRandomTree,
+                "p2" to refLeaf,
+                "p3" to r(
+                    listOf(1, 1),
+                    listOf(l("1"), l("2")),
+                    random
+                )
+            ),
+            concatCombiner
+        )
+        val expected = mapOf(
+            "refLeaf" to refLeaf,
+            "refRandomTree" to refRandomTree,
+            "refCompositeTree" to refCompositeTree,
+            "root" to r(
+                listOf(1, 5, 1, 1),
+                listOf(refLeaf, refRandomTree, refCompositeTree, l("refCompositeTree")),
+                random
+            )
+        )
+
+        val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+        actual shouldBe expected
+    }
 })

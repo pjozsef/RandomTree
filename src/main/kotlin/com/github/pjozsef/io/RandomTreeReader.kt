@@ -25,9 +25,9 @@ fun <T> readTreeFromString(
         when (value) {
             is ArrayNode -> container[key] = readRandomNode(value, mapper, combiner, random, container)
             is ObjectNode -> if (value.isEmpty) {
-                container[key] =  readEmptyNode(key, mapper)
+                container[key] = readEmptyNode(key, mapper)
             } else {
-                container[key] =  readCompositeNode(
+                container[key] = readCompositeNode(
                     value,
                     mapper,
                     combiner,
@@ -50,10 +50,14 @@ private fun <T> readRandomNode(
 ): RandomTree<T> =
     array.elements().asSequence().map { elementValue ->
         when (elementValue) {
-            is ValueNode -> readLeaf(elementValue, mapper)
+            is ValueNode -> {
+                val (weight, name) = elementValue.text().let(::extractValuesFrom)
+                val node = extractLeafOrReference(name, mapper, container)
+                weight to node
+            }
             is ObjectNode -> {
                 val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
-                val (nestedWeight, nestedName) = extractValuesFrom(nestedKey)
+                val (nestedWeight, _) = extractValuesFrom(nestedKey)
                 when (nestedValue) {
                     is ArrayNode -> {
                         val randomNode = readRandomNode(
@@ -108,28 +112,34 @@ private fun <T> readCompositeNode(
                 random,
                 container
             )
+            is TextNode -> elementKey to extractLeafOrReference(elementValue.textValue(), mapper, container)
             else -> error("Unsupported type for CompositeNode: ${elementValue::class.java}")
         }
     }.toMap().let {
         CompositeNode(it, combiner)
     }
 
-private fun <T> readLeaf(valueNode: ValueNode, mapper: (String) -> T): WeightedRandomTree<T> {
-    val text = when (valueNode) {
-        is TextNode -> valueNode.textValue()
-        is NumericNode -> valueNode.numberValue().toString()
-        is BooleanNode -> valueNode.booleanValue().toString()
-        else -> error("Unsupported type for LeafNode: ${valueNode::class.java}")
-    }
-    val (weight, name) = extractValuesFrom(text)
-
-    return weight to Leaf(mapper(name))
-}
-
 private fun <T> readEmptyNode(
     key: String,
     mapper: (String) -> T
-) = Leaf(mapper(key))
+): RandomTree<T> = Leaf(mapper(key))
+
+private fun <T> extractLeafOrReference(
+    key: String,
+    mapper: (String) -> T,
+    container: Map<String, RandomTree<T>>
+): RandomTree<T> = if (key.startsWith(":")) {
+    container.getValue(key.drop(1))
+} else {
+    Leaf(mapper(key))
+}
+
+private fun ValueNode.text() = when (this) {
+    is TextNode -> this.textValue()
+    is NumericNode -> this.numberValue().toString()
+    is BooleanNode -> this.booleanValue().toString()
+    else -> error("Unsupported type for LeafNode: ${this::class.java}")
+}
 
 internal fun extractValuesFrom(text: String): Pair<Number, String> {
     val trimmedText = text.trim()
@@ -144,10 +154,6 @@ internal fun extractValuesFrom(text: String): Pair<Number, String> {
         1 to name
     } ?: error("Regex did not match LeafNode text: $text")
 }
-
-private typealias WeightedRandomTree<T> = Pair<Number, RandomTree<T>>
-
-private infix fun <V> String.mappedTo(that: V) = mapOf(this to that)
 
 private val weightNameRegex by lazy {
     Regex("(?<weight>[1-9][0-9]*) +(?<name>.+)")
