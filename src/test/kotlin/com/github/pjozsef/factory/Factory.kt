@@ -8,7 +8,7 @@ import java.util.*
 
 fun <T> l(value: T) = Leaf(value)
 
-fun <C, T> c(components: Map<String, RandomTree<C>>, combiner: (Map<String, C>) -> T) =
+fun <T> c(components: Map<String, RandomTree<T>>, combiner: (Map<String, T>) -> T) =
     CompositeNode(components, combiner)
 
 fun <T> r(weights: List<Number>, branches: List<RandomTree<T>>, random: Random) =

@@ -14,9 +14,9 @@ data class RandomNode<T>(
     )
 }
 
-data class CompositeNode<T, C>(
-    val components: Map<String, RandomTree<C>>,
-    val combiner: (Map<String, C>) -> T
+data class CompositeNode<T>(
+    val components: Map<String, RandomTree<T>>,
+    val combiner: (Map<String, T>) -> T
 ) : RandomTree<T>()
 
 data class Leaf<T>(val leafValue: T) : RandomTree<T>()
@@ -25,12 +25,12 @@ sealed class RandomTree<T> {
     val value: T
         get() = when (this) {
             is Leaf<T> -> leafValue
-            is CompositeNode<T, *> -> this.combinedValue()
+            is CompositeNode<T> -> this.combinedValue()
             is RandomNode<T> -> this.randomBranch()
         }
 }
 
-private fun <T, C> CompositeNode<T, C>.combinedValue() =
+private fun <T> CompositeNode<T>.combinedValue() =
     this.components.mapValues { (_, v) -> v.value }.let(combiner)
 
 private fun <T> RandomNode<T>.randomBranch() = weightedDie.roll().value

@@ -13,42 +13,40 @@ private val objectMapper by lazy {
     ObjectMapper(YAMLFactory()).findAndRegisterModules()
 }
 
-fun <C, T> readTreeFromString(
+fun <T> readTreeFromString(
     input: String,
-    combiner: (Map<String, C>) -> T,
     mapper: (String) -> T,
-    random: Random = Random(),
-    componentMappers: Map<String, Map<String, (String) -> C>> = mapOf()
+    combiner: (Map<String, T>) -> T,
+    random: Random = Random()
 ): Map<String, RandomTree<T>> {
     val root = objectMapper.readTree(input)
-    return root.fields().asSequence().map { (key, value) ->
+    val container = mutableMapOf<String, RandomTree<T>>()
+    root.fields().asSequence().forEach { (key, value) ->
         when (value) {
-            is ArrayNode -> key mappedTo readRandomNode(value, mapper, combiner, componentMappers, random)
+            is ArrayNode -> container[key] = readRandomNode(value, mapper, combiner, random, container)
             is ObjectNode -> if (value.isEmpty) {
-                key mappedTo readEmptyNode(key, mapper)
+                container[key] =  readEmptyNode(key, mapper)
             } else {
-                key mappedTo readCompositeNode(
+                container[key] =  readCompositeNode(
                     value,
                     mapper,
                     combiner,
-                    componentMappers.getValue(key),
-                    componentMappers,
-                    random
+                    random,
+                    container
                 )
             }
             else -> error("Unsupported type for root: ${value::class.java}")
         }
-    }.reduce { acc, current ->
-        acc + current
     }
+    return container.toMap()
 }
 
-private fun <C, T> readRandomNode(
+private fun <T> readRandomNode(
     array: ArrayNode,
     mapper: (String) -> T,
-    combiner: (Map<String, C>) -> T,
-    componentMappers: Map<String, Map<String, (String) -> C>> = mapOf(),
-    random: Random
+    combiner: (Map<String, T>) -> T,
+    random: Random,
+    container: Map<String, RandomTree<T>>
 ): RandomTree<T> =
     array.elements().asSequence().map { elementValue ->
         when (elementValue) {
@@ -62,8 +60,8 @@ private fun <C, T> readRandomNode(
                             nestedValue,
                             mapper,
                             combiner,
-                            componentMappers,
-                            random
+                            random,
+                            container
                         )
                         nestedWeight to randomNode
                     }
@@ -72,9 +70,8 @@ private fun <C, T> readRandomNode(
                             nestedValue,
                             mapper,
                             combiner,
-                            componentMappers.getValue(nestedName),
-                            componentMappers,
-                            random
+                            random,
+                            container
                         )
                         nestedWeight to composite
                     }
@@ -88,31 +85,29 @@ private fun <C, T> readRandomNode(
         RandomNode(weights, nodes, random)
     }
 
-private fun <C, T> readCompositeNode(
+private fun <T> readCompositeNode(
     value: ObjectNode,
     mapper: (String) -> T,
-    combiner: (Map<String, C>) -> T,
-    componentMapper: Map<String, (String) -> C>,
-    componentMappers: Map<String, Map<String, (String) -> C>> = mapOf(),
-    random: Random
+    combiner: (Map<String, T>) -> T,
+    random: Random,
+    container: Map<String, RandomTree<T>>
 ): RandomTree<T> =
     value.fields().asSequence().map { (elementKey, elementValue) ->
         when (elementValue) {
             is ArrayNode -> elementKey to readRandomNode(
                 elementValue,
-                componentMapper.getValue(elementKey),
+                mapper,
                 combiner,
-                componentMappers,
-                random
-            ) as RandomTree<C>
+                random,
+                container
+            )
             is ObjectNode -> elementKey to readCompositeNode(
                 elementValue,
-                componentMapper.getValue(elementKey),
+                mapper,
                 combiner,
-                componentMappers.getValue(elementKey),
-                componentMappers,
-                random
-            ) as RandomTree<C>
+                random,
+                container
+            )
             else -> error("Unsupported type for CompositeNode: ${elementValue::class.java}")
         }
     }.toMap().let {
