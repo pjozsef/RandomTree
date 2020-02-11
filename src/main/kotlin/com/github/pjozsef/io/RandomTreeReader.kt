@@ -23,11 +23,11 @@ fun <C, T> readTreeFromString(
     val root = objectMapper.readTree(input)
     return root.fields().asSequence().map { (key, value) ->
         when (value) {
-            is ArrayNode -> key mappedTo readRandomNode(value, mapper, random)
+            is ArrayNode -> key mappedTo readRandomNode(value, mapper, combiner, componentMappers, random)
             is ObjectNode -> if (value.isEmpty) {
                 key mappedTo readEmptyNode(key, mapper)
             } else {
-                key mappedTo readCompositeNode(value, combiner, random, componentMappers.getValue(key))
+                key mappedTo readCompositeNode(value, mapper, combiner, componentMappers.getValue(key), componentMappers, random)
             }
             else -> error("Unsupported type for root: ${value::class.java}")
         }
@@ -36,14 +36,44 @@ fun <C, T> readTreeFromString(
     }
 }
 
-private fun <T> readRandomNode(
+private fun <C, T> readRandomNode(
     array: ArrayNode,
     mapper: (String) -> T,
+    combiner: (Map<String, C>) -> T,
+    componentMappers: Map<String, Map<String, (String) -> C>> = mapOf(),
     random: Random
 ): RandomTree<T> =
     array.elements().asSequence().map { elementValue ->
         when (elementValue) {
             is ValueNode -> readLeaf(elementValue, mapper)
+            is ObjectNode -> {
+                val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
+                val (nestedWeight, nestedName) = extractValuesFrom(nestedKey)
+                when(nestedValue){
+                    is ArrayNode -> {
+                        val randomNode = readRandomNode(
+                            nestedValue,
+                            mapper,
+                            combiner,
+                            componentMappers,
+                            random
+                        )
+                        nestedWeight to randomNode
+                    }
+                    is ObjectNode -> {
+                        val composite = readCompositeNode(
+                            nestedValue,
+                            mapper,
+                            combiner,
+                            componentMappers.getValue(nestedName),
+                            componentMappers,
+                            random
+                        )
+                        nestedWeight to composite
+                    }
+                    else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue::class.java}")
+                }
+            }
             else -> error("Unsupported type for RandomNode: ${elementValue::class.java}")
         }
     }.toList().let {
@@ -53,13 +83,15 @@ private fun <T> readRandomNode(
 
 private fun <C, T> readCompositeNode(
     value: ObjectNode,
+    mapper: (String) -> T,
     combiner: (Map<String, C>) -> T,
-    random: Random,
-    componentMappers: Map<String, (String) -> C>
+    componentMapper: Map<String, (String) -> C>,
+    componentMappers: Map<String, Map<String, (String) -> C>> = mapOf(),
+    random: Random
 ): RandomTree<T> =
     value.fields().asSequence().map { (elementKey, elementValue) ->
         when (elementValue) {
-            is ArrayNode -> elementKey to readRandomNode(elementValue, componentMappers.getValue(elementKey), random)
+            is ArrayNode -> elementKey to readRandomNode(elementValue, componentMapper.getValue(elementKey), combiner, componentMappers, random) as RandomTree<C>
             else -> error("Unsupported type for CompositeNode: ${elementValue::class.java}")
         }
     }.toMap().let {

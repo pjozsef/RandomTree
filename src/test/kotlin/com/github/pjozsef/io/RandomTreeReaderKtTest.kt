@@ -184,5 +184,76 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             actual shouldBe expected
         }
+        "randomTree with deeply nested branches" {
+            val componentMappers = mapOf(
+                "composite" to mapOf(
+                    "part1" to { it: String -> it },
+                    "part2" to { it: String -> it }
+                )
+            )
+            val input = """
+                root:
+                    - 3 a:
+                        - a
+                        - aa
+                        - aaa
+                    - b:
+                        - b
+                        - 5 bb
+                    - 4 composite:
+                        part1:
+                            - a
+                            - b
+                        part2:
+                            - 1
+                            - 2
+                    - leafValue
+            """.trimIndent()
+
+            val expected = mapOf(
+                "root" to r(
+                    listOf(3,1,4, 1),
+                    listOf(
+                        r(
+                            listOf(1,1,1),
+                            listOf(l("a"),l("aa"),l("aaa")),
+                            random
+                        ),
+                        r(
+                            listOf(1,5),
+                            listOf(l("b"), l("bb")),
+                            random
+                        ),
+                        c(
+                            mapOf(
+                                "part1" to r(
+                                    listOf(1, 1),
+                                    listOf(l("a"), l("b")),
+                                    random
+                                ),
+                                "part2" to r(
+                                    listOf(1, 1),
+                                    listOf(l("1"), l("2")),
+                                    random
+                                )
+                            ),
+                            emptyCombiner
+                        ),
+                        l("leafValue")
+                    ),
+                    random
+                )
+            )
+
+            val actual = readTreeFromString(
+                input,
+                emptyCombiner,
+                { it },
+                random,
+                componentMappers
+            )
+
+            actual shouldBe expected
+        }
     }
 })
