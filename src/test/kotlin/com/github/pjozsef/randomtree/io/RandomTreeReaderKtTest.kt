@@ -1,4 +1,4 @@
-package com.github.pjozsef.io
+package com.github.pjozsef.randomtree.io
 
 import com.github.pjozsef.factory.c
 import com.github.pjozsef.factory.l

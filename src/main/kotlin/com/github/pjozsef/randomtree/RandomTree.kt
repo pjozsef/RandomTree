@@ -1,5 +1,6 @@
-package com.github.pjozsef
+package com.github.pjozsef.randomtree
 
+import com.github.pjozsef.WeightedDie
 import java.util.*
 
 data class RandomNode<T>(

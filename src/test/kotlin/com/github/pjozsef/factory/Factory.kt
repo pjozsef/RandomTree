@@ -1,9 +1,9 @@
 package com.github.pjozsef.factory
 
-import com.github.pjozsef.CompositeNode
-import com.github.pjozsef.Leaf
-import com.github.pjozsef.RandomNode
-import com.github.pjozsef.RandomTree
+import com.github.pjozsef.randomtree.CompositeNode
+import com.github.pjozsef.randomtree.Leaf
+import com.github.pjozsef.randomtree.RandomNode
+import com.github.pjozsef.randomtree.RandomTree
 import java.util.*
 
 fun <T> l(value: T) = Leaf(value)

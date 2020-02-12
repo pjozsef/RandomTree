@@ -1,5 +1,6 @@
-package com.github.pjozsef
+package com.github.pjozsef.randomtree
 
+import com.github.pjozsef.WeightedDie
 import com.github.pjozsef.factory.c
 import com.github.pjozsef.factory.l
 import com.github.pjozsef.factory.r
