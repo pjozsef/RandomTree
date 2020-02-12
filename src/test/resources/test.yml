@@ -1,0 +1,41 @@
+refLeaf: {}
+refRandomTree:
+  - a
+  - 3 :refLeaf
+refCompositeTree:
+  p1: :refRandomTree
+  p2: :refLeaf
+  p3:
+    - 1
+    - 2
+root:
+  - :refLeaf
+  - 5 :refRandomTree
+  - :refCompositeTree
+  - refCompositeTree
+  - 3 a:
+      - a
+      - aa
+      - aaa
+      - b:
+          - b
+          - 5 bb
+      - 4 composite:
+          part1:
+            - a
+            - b
+          part2:
+            - 1
+            - 2
+      - leafValue
+compositeRoot:
+  innerComposite:
+    first:
+      - x
+      - 3 y
+    second:
+      - z
+      - w
+  innerBranch:
+    - 2 value1
+    - value2

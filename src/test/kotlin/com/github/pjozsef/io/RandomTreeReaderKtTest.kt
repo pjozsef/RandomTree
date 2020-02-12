@@ -8,7 +8,10 @@ import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
+import java.io.File
 import java.util.*
+import java.nio.file.Paths
+
 
 class RandomTreeReaderKtTest : FreeSpec({
 
@@ -345,5 +348,31 @@ class RandomTreeReaderKtTest : FreeSpec({
         val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
 
         actual shouldBe expected
+    }
+    "readTreeFromFile" - {
+        "reads the correct tree" {
+            val path = Thread.currentThread()
+                .contextClassLoader
+                .getResource("test.yml")
+                ?.toURI()
+                ?.let(Paths::get)
+                ?.toAbsolutePath()
+                ?.toString() as String
+
+            val expected = readTreeFromString(
+                File(path).readText(),
+                identityMapper,
+                concatCombiner,
+                random
+            )
+            val actual = readTreeFromFile(
+                path,
+                identityMapper,
+                concatCombiner,
+                random
+            )
+
+            actual shouldBe expected
+        }
     }
 })

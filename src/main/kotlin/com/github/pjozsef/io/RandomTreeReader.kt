@@ -7,11 +7,24 @@ import com.github.pjozsef.CompositeNode
 import com.github.pjozsef.Leaf
 import com.github.pjozsef.RandomNode
 import com.github.pjozsef.RandomTree
+import java.io.File
 import java.util.*
 
 private val objectMapper by lazy {
     ObjectMapper(YAMLFactory()).findAndRegisterModules()
 }
+
+fun <T> readTreeFromFile(
+    path: String,
+    mapper: (String) -> T,
+    combiner: (Map<String, T>) -> T,
+    random: Random = Random()
+): Map<String, RandomTree<T>> = readTreeFromString(
+    File(path).readText(),
+    mapper,
+    combiner,
+    random
+)
 
 fun <T> readTreeFromString(
     input: String,
