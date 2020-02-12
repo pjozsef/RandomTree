@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.*
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.github.pjozsef.randomtree.CompositeNode
-import com.github.pjozsef.randomtree.Leaf
+import com.github.pjozsef.randomtree.LeafNode
 import com.github.pjozsef.randomtree.RandomNode
 import com.github.pjozsef.randomtree.RandomTree
 import java.io.File
@@ -135,7 +135,7 @@ private fun <T> readCompositeNode(
 private fun <T> readEmptyNode(
     key: String,
     mapper: (String) -> T
-): RandomTree<T> = Leaf(mapper(key))
+): RandomTree<T> = LeafNode(mapper(key))
 
 private fun <T> extractLeafOrReference(
     key: String,
@@ -144,7 +144,7 @@ private fun <T> extractLeafOrReference(
 ): RandomTree<T> = if (key.startsWith(":")) {
     container.getValue(key.drop(1))
 } else {
-    Leaf(mapper(key))
+    LeafNode(mapper(key))
 }
 
 private fun ValueNode.text() = when (this) {

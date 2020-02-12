@@ -1,12 +1,12 @@
 package com.github.pjozsef.factory
 
 import com.github.pjozsef.randomtree.CompositeNode
-import com.github.pjozsef.randomtree.Leaf
+import com.github.pjozsef.randomtree.LeafNode
 import com.github.pjozsef.randomtree.RandomNode
 import com.github.pjozsef.randomtree.RandomTree
 import java.util.*
 
-fun <T> l(value: T) = Leaf(value)
+fun <T> l(value: T) = LeafNode(value)
 
 fun <T> c(components: Map<String, RandomTree<T>>, combiner: (Map<String, T>) -> T) =
     CompositeNode(components, combiner)

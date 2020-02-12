@@ -20,12 +20,12 @@ data class CompositeNode<T>(
     val combiner: (Map<String, T>) -> T
 ) : RandomTree<T>()
 
-data class Leaf<T>(val leafValue: T) : RandomTree<T>()
+data class LeafNode<T>(val leafValue: T) : RandomTree<T>()
 
 sealed class RandomTree<T> {
     val value: T
         get() = when (this) {
-            is Leaf<T> -> leafValue
+            is LeafNode<T> -> leafValue
             is CompositeNode<T> -> this.combinedValue()
             is RandomNode<T> -> this.randomBranch()
         }
