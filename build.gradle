@@ -13,10 +13,10 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
-apply from: './release.gradle'
-
 group 'com.github.pjozsef'
 version "git describe".execute().text.trim()
+
+apply from: './release.gradle'
 
 repositories {
     jcenter()
@@ -48,8 +48,4 @@ jar {
                 'Implementation-Version': version,
                 'Main-Class': 'com.github.pjozsef.randomtree.cli.MainKt'
     }
-}
-
-shadowJar {
-//    minimize()
 }
