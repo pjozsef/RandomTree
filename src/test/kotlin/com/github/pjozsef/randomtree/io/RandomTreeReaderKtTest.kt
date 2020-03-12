@@ -1,6 +1,7 @@
 package com.github.pjozsef.randomtree.io
 
 import com.github.pjozsef.factory.c
+import com.github.pjozsef.factory.coll
 import com.github.pjozsef.factory.l
 import com.github.pjozsef.factory.r
 import io.kotlintest.assertSoftly
@@ -33,7 +34,8 @@ class RandomTreeReaderKtTest : FreeSpec({
             row("10", 1, "10"),
             row("10      ", 1, "10"),
             row("     10      ", 1, "10"),
-            row("2 3", 2, "3")
+            row("2 3", 2, "3"),
+            row("2 :tree reference", 2, ":tree reference")
         ) { input, expectedWeight, expectedName ->
             val (actualWeight, actualName) = extractValuesFrom(input)
             assertSoftly {
@@ -342,6 +344,93 @@ class RandomTreeReaderKtTest : FreeSpec({
                 listOf(1, 5, 1, 1),
                 listOf(refLeaf, refRandomTree, refCompositeTree, l("refCompositeTree")),
                 random
+            )
+        )
+
+        val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+        actual shouldBe expected
+    }
+    "treeCollection with inline definitions" {
+        val input = """
+                ^collection: 
+                    - inlineLeaf
+                    - inlineRandom:
+                        - a
+                        - b
+                        - c
+                    - inlineComposite:
+                        first: 
+                            - 0
+                            - 1
+                        second:
+                            - 2
+                            - 3
+                    - ^inlineCollection:
+                        - x
+                        - y
+                        - z
+                    - 3 inlineWithRepetition
+            """.trimIndent()
+
+        val expected = mapOf(
+            "collection" to coll(
+                l("inlineLeaf"),
+                r(
+                    listOf(1, 1, 1),
+                    listOf(l("a"), l("b"), l("c")),
+                    random
+                ),
+                c(
+                    mapOf(
+                        "first" to r(
+                            listOf(1, 1),
+                            listOf(l("0"), l("1")),
+                            random
+                        ),
+                        "second" to r(
+                            listOf(1, 1),
+                            listOf(l("2"), l("3")),
+                            random
+                        )
+                    ), concatCombiner
+                ),
+                coll(
+                    l("x"),
+                    l("y"),
+                    l("z")
+                ),
+                coll(
+                    l("inlineWithRepetition"),
+                    l("inlineWithRepetition"),
+                    l("inlineWithRepetition")
+                )
+            )
+        )
+
+        val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+        actual shouldBe expected
+    }
+    "treeCollection with references" {
+        val input = """
+                referenceLeaf: {}
+                referenceWithRepetition: {}
+                ^collection: 
+                    - :referenceLeaf
+                    - 3 :referenceWithRepetition
+            """.trimIndent()
+
+        val expected = mapOf(
+            "referenceLeaf" to l("referenceLeaf"),
+            "referenceWithRepetition" to l("referenceWithRepetition"),
+            "collection" to coll(
+                l("referenceLeaf"),
+                coll(
+                    l("referenceWithRepetition"),
+                    l("referenceWithRepetition"),
+                    l("referenceWithRepetition")
+                )
             )
         )
 
