@@ -1,5 +1,6 @@
 package com.github.pjozsef.factory
 
+import com.github.pjozsef.randomtree.TreeCollection
 import com.github.pjozsef.randomtree.CompositeNode
 import com.github.pjozsef.randomtree.LeafNode
 import com.github.pjozsef.randomtree.RandomNode
@@ -13,3 +14,5 @@ fun <T> c(components: Map<String, RandomTree<T>>, combiner: (Map<String, T>) -> 
 
 fun <T> r(weights: List<Number>, branches: List<RandomTree<T>>, random: Random) =
     RandomNode(weights, branches, random)
+
+fun <T> coll(vararg trees: RandomTree<T>) = TreeCollection(trees.asList())

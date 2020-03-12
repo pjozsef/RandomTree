@@ -2,6 +2,7 @@ package com.github.pjozsef.randomtree
 
 import com.github.pjozsef.WeightedDie
 import com.github.pjozsef.factory.c
+import com.github.pjozsef.factory.coll
 import com.github.pjozsef.factory.l
 import com.github.pjozsef.factory.r
 import io.kotlintest.data.suspend.forall
@@ -23,7 +24,7 @@ class RandomTreeTest : FreeSpec({
                         "2" to l("b"),
                         "3" to l("c")
                     )
-                ) { it.map { (k,v)-> "$k=$v" }.joinToString(", ") }, "1=a, 2=b, 3=c"
+                ) { it.map { (k, v) -> "$k=$v" }.joinToString(", ") }, "1=a, 2=b, 3=c"
             ),
             row(
                 r(
@@ -35,6 +36,13 @@ class RandomTreeTest : FreeSpec({
                     ),
                     random()
                 ), "2"
+            ),
+            row(
+                coll(
+                    l("value1"),
+                    l("value2"),
+                    l("value3")
+                ), "value1"
             )
         ) { tree: RandomTree<*>, expectedValue: String ->
             tree.value shouldBe expectedValue
@@ -65,6 +73,31 @@ class RandomTreeTest : FreeSpec({
         val actualValues = (1..steps).map { node.value }
 
         actualValues shouldBe expectedValues
+    }
+
+    "treeCollection" - {
+        "returns all values" {
+            coll(
+                l("value1"),
+                l("value2"),
+                l("value3")
+            ).values shouldBe listOf("value1", "value2", "value3")
+        }
+        "flattens nested values" {
+            coll(
+                l("value1"),
+                coll(
+                    l("a"),
+                    l("b"),
+                    coll(
+                        l("x"),
+                        l("y")
+                    )
+                ),
+                l("value2"),
+                l("value3")
+            ).values shouldBe listOf("value1", "a", "b", "x", "y", "value2", "value3")
+        }
     }
 })
 
