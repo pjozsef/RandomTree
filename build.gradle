@@ -61,6 +61,7 @@ pitest {
     testPlugin.set("junit5")
     targetClasses.set(['com.github.pjozsef.randomtree.*'])
     excludedClasses.set(['com.github.pjozsef.randomtree.cli.*'])
+    avoidCallsTo.set(['org.slf4j', 'kotlin.jvm.internal.Intrinsics'])
     threads.set(4)
     outputFormats.set(['XML', 'HTML'])
 }
