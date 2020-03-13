@@ -2,9 +2,12 @@ buildscript {
     repositories {
         jcenter()
     }
+    configurations.maybeCreate('pitest')
     dependencies {
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.+'
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath 'info.solidsoft.gradle.pitest:gradle-pitest-plugin:+'
+        pitest 'org.pitest:pitest-junit5-plugin:+'
     }
 }
 
@@ -16,6 +19,7 @@ plugins {
 group 'com.github.pjozsef'
 version "git describe".execute().text.trim()
 
+apply plugin: 'info.solidsoft.pitest'
 apply from: './release.gradle'
 
 repositories {
@@ -33,6 +37,8 @@ dependencies {
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.10.2'
 
     testImplementation 'io.kotlintest:kotlintest-runner-junit5:3.3.2'
+    testRuntime 'org.slf4j:slf4j-simple:1.7.30'
+
 }
 
 compileKotlin {
@@ -48,4 +54,13 @@ jar {
                 'Implementation-Version': version,
                 'Main-Class': 'com.github.pjozsef.randomtree.cli.MainKt'
     }
+}
+
+pitest {
+    pitestVersion = '1.4.10'
+    testPlugin.set("junit5")
+    targetClasses.set(['com.github.pjozsef.randomtree.*'])
+    excludedClasses.set(['com.github.pjozsef.randomtree.cli.*'])
+    threads.set(4)
+    outputFormats.set(['XML', 'HTML'])
 }
