@@ -1,8 +1,8 @@
 package com.github.pjozsef.randomtree.io
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.pjozsef.factory.c
 import com.github.pjozsef.factory.coll
 import com.github.pjozsef.factory.l
@@ -14,6 +14,7 @@ import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.yaml.snakeyaml.Yaml
 import java.io.File
 import java.nio.file.Paths
 import java.util.*
@@ -489,9 +490,10 @@ class RandomTreeReaderKtTest : FreeSpec({
             )
 
             val jsonNodeInput = withContext(Dispatchers.IO) {
+                val map = Yaml().load<Map<String, Any>>(rawText)
                 ObjectMapper(YAMLFactory())
                     .findAndRegisterModules()
-                    .readTree(rawText)
+                    .convertValue(map, JsonNode::class.java)
             }
 
             val actual = readTreeFromJsonNode(
@@ -525,9 +527,7 @@ class RandomTreeReaderKtTest : FreeSpec({
             )
 
             val mapInput = withContext(Dispatchers.IO) {
-                ObjectMapper(YAMLFactory())
-                    .findAndRegisterModules()
-                    .readValue<Map<String, Any>>(rawText)
+                Yaml().load<Map<String, Any>>(rawText)
             }
 
             val actual = readTreeFromMap(

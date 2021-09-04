@@ -28,7 +28,7 @@ root:
             - 1
             - 2
       - leafValue
-compositeRoot:
+compositeRoot: &ref
   innerComposite:
     first:
       - x
@@ -39,3 +39,4 @@ compositeRoot:
   innerBranch:
     - 2 value1
     - value2
+compositeRootCopy: *ref

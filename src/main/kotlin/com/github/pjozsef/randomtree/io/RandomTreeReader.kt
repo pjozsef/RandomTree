@@ -5,11 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.*
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.github.pjozsef.randomtree.*
+import org.yaml.snakeyaml.Yaml
 import java.io.File
 import java.util.*
 
 private val objectMapper by lazy {
     ObjectMapper(YAMLFactory()).findAndRegisterModules()
+}
+
+private val snakeYml by lazy {
+    Yaml()
 }
 
 object RandomTreeReader {
@@ -32,12 +37,12 @@ fun <T> readTreeFromFile(
 )
 
 fun <T> readTreeFromString(
-    input: String,
+    inputString: String,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
     random: Random = Random()
-): Map<String, RandomTree<T>> = readTreeFromJsonNode(
-    objectMapper.readTree(input),
+): Map<String, RandomTree<T>> = readTreeFromMap(
+    snakeYml.load(inputString),
     mapper,
     combiner,
     random
