@@ -1,29 +1,26 @@
 buildscript {
     repositories {
-        jcenter()
+        gradlePluginPortal()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
-    configurations.maybeCreate('pitest')
     dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.+'
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
-        classpath 'info.solidsoft.gradle.pitest:gradle-pitest-plugin:+'
-        pitest 'org.pitest:pitest-junit5-plugin:+'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.30"
+        classpath 'gradle.plugin.com.github.jengelman.gradle.plugins:shadow:7.0.0'
     }
 }
 
-plugins {
-    id 'org.jetbrains.kotlin.jvm' version '1.3.50'
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
-}
+apply plugin: 'kotlin'
+apply plugin: "com.github.johnrengelman.shadow"
 
 group 'com.github.pjozsef'
 version "git describe".execute().text.trim()
 
-apply plugin: 'info.solidsoft.pitest'
 apply from: './release.gradle'
 
 repositories {
-    jcenter()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
 
 test {
@@ -32,13 +29,12 @@ test {
 
 dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-    implementation 'com.github.pjozsef:weighted-random:1.0.0'
+    implementation 'com.github.pjozsef:WeightedRandom:1.0.0'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.10.2'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.10.2'
 
     testImplementation 'io.kotlintest:kotlintest-runner-junit5:3.3.2'
-    testRuntime 'org.slf4j:slf4j-simple:1.7.30'
-
+    testRuntimeOnly 'org.slf4j:slf4j-simple:1.7.30'
 }
 
 compileKotlin {
@@ -54,14 +50,4 @@ jar {
                 'Implementation-Version': version,
                 'Main-Class': 'com.github.pjozsef.randomtree.cli.MainKt'
     }
-}
-
-pitest {
-    pitestVersion = '1.4.10'
-    testPlugin.set("junit5")
-    targetClasses.set(['com.github.pjozsef.randomtree.*'])
-    excludedClasses.set(['com.github.pjozsef.randomtree.cli.*'])
-    avoidCallsTo.set(['org.slf4j', 'kotlin.jvm.internal.Intrinsics'])
-    threads.set(4)
-    outputFormats.set(['XML', 'HTML'])
 }
