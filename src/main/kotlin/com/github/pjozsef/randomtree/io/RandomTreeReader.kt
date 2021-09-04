@@ -12,6 +12,13 @@ private val objectMapper by lazy {
     ObjectMapper(YAMLFactory()).findAndRegisterModules()
 }
 
+object RandomTreeReader {
+    val IDENTITY_MAPPER: (String) -> String = { it }
+    val CONCAT_COMBINER: (Map<String, String>) -> String = {
+        it.toSortedMap().values.joinToString(" ")
+    }
+}
+
 fun <T> readTreeFromFile(
     path: String,
     mapper: (String) -> T,
