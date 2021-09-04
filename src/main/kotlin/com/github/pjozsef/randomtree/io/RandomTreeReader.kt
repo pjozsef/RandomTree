@@ -14,8 +14,8 @@ private val objectMapper by lazy {
 
 object RandomTreeReader {
     val IDENTITY_MAPPER: (String) -> String = { it }
-    val CONCAT_COMBINER: (Map<String, String>) -> String = {
-        it.toSortedMap().values.joinToString(" ")
+    val CONCAT_COMBINER: (String) -> ((Map<String, String>) -> String) = { joinString ->
+        { it -> it.toSortedMap().values.joinToString(joinString) }
     }
 }
 
@@ -91,56 +91,56 @@ private fun <T> readArray(
     container: Map<String, RandomTree<T>>
 ): RandomTree<T> =
     array.elements().asSequence().map { elementValue ->
-    when (elementValue) {
-        is ValueNode -> {
-            val (weight, name) = elementValue.text().let(::extractValuesFrom)
-            val node = extractLeafOrReference(name, mapper, container)
-            weight to node
-        }
-        is ObjectNode -> {
-            val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
-            val (nestedWeight, name) = extractValuesFrom(nestedKey)
-            when (nestedValue) {
-                is ArrayNode -> {
-                    val randomNode = readArray(
-                        name,
-                        nestedValue,
-                        mapper,
-                        combiner,
-                        random,
-                        container
-                    )
-                    nestedWeight to randomNode
-                }
-                is ObjectNode -> {
-                    val composite = readCompositeNode(
-                        nestedValue,
-                        mapper,
-                        combiner,
-                        random,
-                        container
-                    )
-                    nestedWeight to composite
-                }
-                else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue::class.java}")
+        when (elementValue) {
+            is ValueNode -> {
+                val (weight, name) = elementValue.text().let(::extractValuesFrom)
+                val node = extractLeafOrReference(name, mapper, container)
+                weight to node
             }
-        }
-        else -> error("Unsupported type for RandomNode: ${elementValue::class.java}")
-    }
-}.toList().let {
-    if (arrayName.startsWith("^")) {
-        it.map { (times, node) ->
-            if(times==1) {
-                node
-            } else {
-                (1..times.toInt()).map { node }.let(::TreeCollection)
+            is ObjectNode -> {
+                val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
+                val (nestedWeight, name) = extractValuesFrom(nestedKey)
+                when (nestedValue) {
+                    is ArrayNode -> {
+                        val randomNode = readArray(
+                            name,
+                            nestedValue,
+                            mapper,
+                            combiner,
+                            random,
+                            container
+                        )
+                        nestedWeight to randomNode
+                    }
+                    is ObjectNode -> {
+                        val composite = readCompositeNode(
+                            nestedValue,
+                            mapper,
+                            combiner,
+                            random,
+                            container
+                        )
+                        nestedWeight to composite
+                    }
+                    else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue::class.java}")
+                }
             }
-        }.let(::TreeCollection)
-    } else {
-        val (weights, nodes) = it.unzip()
-        RandomNode(weights, nodes, random)
+            else -> error("Unsupported type for RandomNode: ${elementValue::class.java}")
+        }
+    }.toList().let {
+        if (arrayName.startsWith("^")) {
+            it.map { (times, node) ->
+                if (times == 1) {
+                    node
+                } else {
+                    (1..times.toInt()).map { node }.let(::TreeCollection)
+                }
+            }.let(::TreeCollection)
+        } else {
+            val (weights, nodes) = it.unzip()
+            RandomNode(weights, nodes, random)
+        }
     }
-}
 
 private fun <T> readCompositeNode(
     value: ObjectNode,

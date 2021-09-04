@@ -13,7 +13,7 @@ fun main(args: Array<String>) {
         println("Seed: $seed")
         Random(seed.toLong(36))
     }
-    val randomTrees = readTreeFromFile(args[0], IDENTITY_MAPPER, CONCAT_COMBINER, random)
+    val randomTrees = readTreeFromFile(args[0], IDENTITY_MAPPER, CONCAT_COMBINER(" "), random)
     (1..args.lastIndex).forEach { category ->
         randomTrees[args[category]]?.print()
         println("-----")
