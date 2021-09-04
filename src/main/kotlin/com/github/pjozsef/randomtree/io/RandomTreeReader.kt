@@ -1,5 +1,6 @@
 package com.github.pjozsef.randomtree.io
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.*
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -28,8 +29,31 @@ fun <T> readTreeFromString(
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
     random: Random = Random()
+): Map<String, RandomTree<T>> = readTreeFromJsonNode(
+    objectMapper.readTree(input),
+    mapper,
+    combiner,
+    random
+)
+
+fun <T> readTreeFromMap(
+    inputMap: Map<String, Any>,
+    mapper: (String) -> T,
+    combiner: (Map<String, T>) -> T,
+    random: Random = Random()
+): Map<String, RandomTree<T>> = readTreeFromJsonNode(
+    objectMapper.convertValue(inputMap, JsonNode::class.java),
+    mapper,
+    combiner,
+    random
+)
+
+fun <T> readTreeFromJsonNode(
+    root: JsonNode,
+    mapper: (String) -> T,
+    combiner: (Map<String, T>) -> T,
+    random: Random = Random()
 ): Map<String, RandomTree<T>> {
-    val root = objectMapper.readTree(input)
     val container = mutableMapOf<String, RandomTree<T>>()
     root.fields().asSequence().forEach { (key, value) ->
         when (value) {

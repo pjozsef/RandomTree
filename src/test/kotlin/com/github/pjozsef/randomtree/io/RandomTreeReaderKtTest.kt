@@ -1,5 +1,8 @@
 package com.github.pjozsef.randomtree.io
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.pjozsef.factory.c
 import com.github.pjozsef.factory.coll
 import com.github.pjozsef.factory.l
@@ -9,10 +12,11 @@ import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.*
 import java.nio.file.Paths
-
+import java.util.*
 
 class RandomTreeReaderKtTest : FreeSpec({
 
@@ -456,6 +460,78 @@ class RandomTreeReaderKtTest : FreeSpec({
             )
             val actual = readTreeFromFile(
                 path,
+                identityMapper,
+                concatCombiner,
+                random
+            )
+
+            actual shouldBe expected
+        }
+    }
+
+    "readTreeFromJsonNode" - {
+        "reads the correct tree" {
+            val path = Thread.currentThread()
+                .contextClassLoader
+                .getResource("test.yml")
+                ?.toURI()
+                ?.let(Paths::get)
+                ?.toAbsolutePath()
+                ?.toString() as String
+
+            val rawText = File(path).readText()
+
+            val expected = readTreeFromString(
+                rawText,
+                identityMapper,
+                concatCombiner,
+                random
+            )
+
+            val jsonNodeInput = withContext(Dispatchers.IO) {
+                ObjectMapper(YAMLFactory())
+                    .findAndRegisterModules()
+                    .readTree(rawText)
+            }
+
+            val actual = readTreeFromJsonNode(
+                jsonNodeInput,
+                identityMapper,
+                concatCombiner,
+                random
+            )
+
+            actual shouldBe expected
+        }
+    }
+
+    "readTreeFromMap" - {
+        "reads the correct tree" {
+            val path = Thread.currentThread()
+                .contextClassLoader
+                .getResource("test.yml")
+                ?.toURI()
+                ?.let(Paths::get)
+                ?.toAbsolutePath()
+                ?.toString() as String
+
+            val rawText = File(path).readText()
+
+            val expected = readTreeFromString(
+                rawText,
+                identityMapper,
+                concatCombiner,
+                random
+            )
+
+            val mapInput = withContext(Dispatchers.IO) {
+                ObjectMapper(YAMLFactory())
+                    .findAndRegisterModules()
+                    .readValue<Map<String, Any>>(rawText)
+            }
+
+            val actual = readTreeFromMap(
+                mapInput,
                 identityMapper,
                 concatCombiner,
                 random
