@@ -40,3 +40,6 @@ compositeRoot: &ref
     - 2 value1
     - value2
 compositeRootCopy: *ref
+arrayOfArays:
+  - [x,y,z]
+  - [a,b,c]
