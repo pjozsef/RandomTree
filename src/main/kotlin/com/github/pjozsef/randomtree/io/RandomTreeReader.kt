@@ -102,6 +102,14 @@ private fun <T> readArray(
                 val node = extractLeafOrReference(name, mapper, container)
                 weight to node
             }
+            is ArrayNode -> DEFAULT_WEIGHT to readArray(
+                "",
+                elementValue,
+                mapper,
+                combiner,
+                random,
+                container
+            )
             is ObjectNode -> {
                 val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
                 val (nestedWeight, name) = extractValuesFrom(nestedKey)
@@ -135,7 +143,7 @@ private fun <T> readArray(
     }.toList().let {
         if (arrayName.startsWith("^")) {
             it.map { (times, node) ->
-                if (times == 1) {
+                if (times == DEFAULT_WEIGHT) {
                     node
                 } else {
                     (1..times.toInt()).map { node }.let(::TreeCollection)
@@ -210,7 +218,7 @@ internal fun extractValuesFrom(text: String): Pair<Number, String> {
     } ?: nameRegex.matchEntire(trimmedText)?.let {
         val name = it.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
 
-        1 to name
+        DEFAULT_WEIGHT to name
     } ?: error("Regex did not match Node text: $text")
 }
 
@@ -223,3 +231,5 @@ private val weightNameRegex by lazy {
 private val nameRegex by lazy {
     Regex("(?<name>.+)")
 }
+
+private const val DEFAULT_WEIGHT = 1
