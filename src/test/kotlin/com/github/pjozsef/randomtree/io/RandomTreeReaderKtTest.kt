@@ -443,6 +443,46 @@ class RandomTreeReaderKtTest : FreeSpec({
 
         actual shouldBe expected
     }
+    "adjusts relative weight when 'relativeWeight' is enabled" - {
+        val input = """
+            node:
+                - 5 weightedArray: [a,b,c]
+                - 2 anotherWeighted: [d,e]
+                - 3 g
+                - f
+            """.trimIndent()
+
+        val expected = mapOf(
+            "node" to r(
+                listOf(15, 4, 3, 1),
+                listOf(
+                    r(
+                        listOf(1,1,1),
+                        listOf(l("a"), l("b"), l("c")),
+                        random
+                    ),
+                    r(
+                        listOf(1,1),
+                        listOf(l("d"), l("e")),
+                        random
+                    ),
+                    l("g"),
+                    l("f")
+                ),
+                random
+            )
+        )
+
+        val actual = readTreeFromString(
+            input,
+            identityMapper,
+            concatCombiner,
+            random,
+            adjustRelativeWeight = true
+        )
+
+        actual shouldBe expected
+    }
     "readTreeFromFile" - {
         "reads the correct tree" {
             val path = Thread.currentThread()

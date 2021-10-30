@@ -28,48 +28,55 @@ fun <T> readTreeFromFile(
     path: String,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
-    random: Random = Random()
+    random: Random = Random(),
+    adjustRelativeWeight: Boolean = false,
 ): Map<String, RandomTree<T>> = readTreeFromString(
     File(path).readText(),
     mapper,
     combiner,
-    random
+    random,
+    adjustRelativeWeight
 )
 
 fun <T> readTreeFromString(
     inputString: String,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
-    random: Random = Random()
+    random: Random = Random(),
+    adjustRelativeWeight: Boolean = false,
 ): Map<String, RandomTree<T>> = readTreeFromMap(
     snakeYml.load(inputString),
     mapper,
     combiner,
-    random
+    random,
+    adjustRelativeWeight
 )
 
 fun <T> readTreeFromMap(
     inputMap: Map<String, Any>,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
-    random: Random = Random()
+    random: Random = Random(),
+    adjustRelativeWeight: Boolean = false,
 ): Map<String, RandomTree<T>> = readTreeFromJsonNode(
     objectMapper.convertValue(inputMap, JsonNode::class.java),
     mapper,
     combiner,
-    random
+    random,
+    adjustRelativeWeight
 )
 
 fun <T> readTreeFromJsonNode(
     root: JsonNode,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
-    random: Random = Random()
+    random: Random = Random(),
+    adjustRelativeWeight: Boolean = false
 ): Map<String, RandomTree<T>> {
     val container = mutableMapOf<String, RandomTree<T>>()
     root.fields().asSequence().forEach { (key, value) ->
         when (value) {
-            is ArrayNode -> container[key.dropSpecial()] = readArray(key, value, mapper, combiner, random, container)
+            is ArrayNode -> container[key.dropSpecial()] = readArray(key, value, mapper, combiner, random, container, adjustRelativeWeight)
             is ObjectNode -> if (value.isEmpty) {
                 container[key] = readEmptyNode(key, mapper)
             } else {
@@ -78,7 +85,8 @@ fun <T> readTreeFromJsonNode(
                     mapper,
                     combiner,
                     random,
-                    container
+                    container,
+                    adjustRelativeWeight
                 )
             }
             else -> error("Unsupported type for root: ${value::class.java}")
@@ -93,7 +101,8 @@ private fun <T> readArray(
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
     random: Random,
-    container: Map<String, RandomTree<T>>
+    container: Map<String, RandomTree<T>>,
+    adjustRelativeWeight: Boolean
 ): RandomTree<T> =
     array.elements().asSequence().map { elementValue ->
         when (elementValue) {
@@ -108,7 +117,8 @@ private fun <T> readArray(
                 mapper,
                 combiner,
                 random,
-                container
+                container,
+                adjustRelativeWeight
             )
             is ObjectNode -> {
                 val (nestedKey, nestedValue) = elementValue.fields().asSequence().toList().first()
@@ -121,9 +131,11 @@ private fun <T> readArray(
                             mapper,
                             combiner,
                             random,
-                            container
+                            container,
+                            adjustRelativeWeight
                         )
-                        nestedWeight to randomNode
+                        val multiplier = if(adjustRelativeWeight) nestedValue.elements().asSequence().toList().size else 1
+                        nestedWeight.toInt() * multiplier to randomNode
                     }
                     is ObjectNode -> {
                         val composite = readCompositeNode(
@@ -131,7 +143,8 @@ private fun <T> readArray(
                             mapper,
                             combiner,
                             random,
-                            container
+                            container,
+                            adjustRelativeWeight
                         )
                         nestedWeight to composite
                     }
@@ -160,7 +173,8 @@ private fun <T> readCompositeNode(
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
     random: Random,
-    container: Map<String, RandomTree<T>>
+    container: Map<String, RandomTree<T>>,
+    adjustRelativeWeight: Boolean
 ): RandomTree<T> =
     value.fields().asSequence().map { (elementKey, elementValue) ->
         when (elementValue) {
@@ -170,14 +184,16 @@ private fun <T> readCompositeNode(
                 mapper,
                 combiner,
                 random,
-                container
+                container,
+                adjustRelativeWeight
             )
             is ObjectNode -> elementKey to readCompositeNode(
                 elementValue,
                 mapper,
                 combiner,
                 random,
-                container
+                container,
+                adjustRelativeWeight
             )
             is TextNode -> elementKey to extractLeafOrReference(elementValue.textValue(), mapper, container)
             else -> error("Unsupported type for CompositeNode: ${elementValue::class.java}")
