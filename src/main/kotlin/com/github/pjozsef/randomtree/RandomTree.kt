@@ -3,6 +3,12 @@ package com.github.pjozsef.randomtree
 import com.github.pjozsef.WeightedDie
 import java.util.*
 
+data class DicePoolNode<T>(
+    val dicePool: List<Number>,
+    val branches: List<RandomTree<T>>,
+    val random: Random = Random()
+) : RandomTree<T>()
+
 data class RandomNode<T>(
     val weights: List<Number>,
     val branches: List<RandomTree<T>>,
@@ -38,6 +44,7 @@ sealed class RandomTree<T> {
             is LeafNode<T> -> leafValue
             is CompositeNode<T> -> this.combinedValue()
             is RandomNode<T> -> this.randomBranch()
+            is DicePoolNode<T> -> this.randomBranch()
             is TreeCollection<T> -> trees.first().value
         }
 }
@@ -46,4 +53,27 @@ private fun <T> CompositeNode<T>.combinedValue() =
     this.components.mapValues { (_, v) -> v.value }.let(combiner)
 
 private fun <T> RandomNode<T>.randomBranch() = weightedDie.roll().value
+
+private data class Roll(
+    val index: Int,
+    val type: Int,
+    val value: Int
+)
+
+private fun <T> DicePoolNode<T>.randomBranch() =
+    dicePool.mapIndexed { i, it ->
+        Roll(
+            i,
+            it.toInt(),
+            random.nextInt(it.toInt()) + 1
+        )
+    }.reduce { acc, curr ->
+        when {
+            curr.value > acc.value -> curr
+            curr.value == acc.value && curr.type > acc.type -> curr
+            else -> acc
+        }
+    }.let {
+        branches[it.index].value
+    }
 

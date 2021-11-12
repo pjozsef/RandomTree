@@ -1,14 +1,13 @@
 package com.github.pjozsef.randomtree
 
 import com.github.pjozsef.WeightedDie
-import com.github.pjozsef.factory.c
-import com.github.pjozsef.factory.coll
-import com.github.pjozsef.factory.l
-import com.github.pjozsef.factory.r
+import com.github.pjozsef.factory.*
 import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.util.*
 
 class RandomTreeTest : FreeSpec({
@@ -43,6 +42,18 @@ class RandomTreeTest : FreeSpec({
                     l("value2"),
                     l("value3")
                 ), "value1"
+            ),
+            row(
+                d(
+                    listOf(4, 6, 10),
+                    listOf(
+                        l("1"),
+                        l("2"),
+                        l("3")
+                    ),
+                    random()
+                ),
+                "3"
             )
         ) { tree: RandomTree<*>, expectedValue: String ->
             tree.value shouldBe expectedValue
@@ -97,6 +108,34 @@ class RandomTreeTest : FreeSpec({
                 l("value2"),
                 l("value3")
             ).values shouldBe listOf("value1", "a", "b", "x", "y", "value2", "value3")
+        }
+    }
+
+    "dicePoolNode" - {
+        val random = mock<Random>()
+        val node = d(
+            listOf(4, 6, 10),
+            listOf(
+                l("1"),
+                l("2"),
+                l("3")
+            ),
+            random
+        )
+        "chooses branch that rolled highest" {
+            whenever(random.nextInt(4)).thenReturn(3)
+            whenever(random.nextInt(6)).thenReturn(6)
+            whenever(random.nextInt(10)).thenReturn(1)
+
+            node.value shouldBe "2"
+        }
+
+        "chooses higher die type when results are equal" {
+            whenever(random.nextInt(4)).thenReturn(4)
+            whenever(random.nextInt(6)).thenReturn(3)
+            whenever(random.nextInt(10)).thenReturn(4)
+
+            node.value shouldBe "3"
         }
     }
 })
