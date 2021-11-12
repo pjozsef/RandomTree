@@ -3,13 +3,11 @@ package com.github.pjozsef.randomtree.io
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.github.pjozsef.factory.c
-import com.github.pjozsef.factory.coll
-import com.github.pjozsef.factory.l
-import com.github.pjozsef.factory.r
+import com.github.pjozsef.factory.*
 import io.kotlintest.assertSoftly
 import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldThrow
 import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +42,7 @@ class RandomTreeReaderKtTest : FreeSpec({
         ) { input, expectedWeight, expectedName ->
             val (actualWeight, actualName) = extractValuesFrom(input)
             assertSoftly {
-                actualWeight shouldBe expectedWeight
+                actualWeight.value shouldBe expectedWeight
                 actualName shouldBe expectedName
             }
         }
@@ -231,6 +229,7 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             actual shouldBe expected
         }
+
     }
     "compositeTree with deeply nested branches" {
         val input = """
@@ -443,7 +442,7 @@ class RandomTreeReaderKtTest : FreeSpec({
 
         actual shouldBe expected
     }
-    "adjusts relative weight when 'relativeWeight' is enabled" - {
+    "adjusts relative weight when 'relativeWeight' is enabled" {
         val input = """
             node:
                 - 5 weightedArray: [a,b,c]
@@ -457,12 +456,12 @@ class RandomTreeReaderKtTest : FreeSpec({
                 listOf(15, 4, 3, 1),
                 listOf(
                     r(
-                        listOf(1,1,1),
+                        listOf(1, 1, 1),
                         listOf(l("a"), l("b"), l("c")),
                         random
                     ),
                     r(
-                        listOf(1,1),
+                        listOf(1, 1),
                         listOf(l("d"), l("e")),
                         random
                     ),
@@ -483,6 +482,87 @@ class RandomTreeReaderKtTest : FreeSpec({
 
         actual shouldBe expected
     }
+
+    "dice pool node" - {
+        "parses dice pool leaves" {
+            val input = """
+                root:
+                  - d4 a
+                  - d6 b
+            """.trimIndent()
+
+            val expected = mapOf(
+                "root" to d(
+                    listOf(4, 6),
+                    listOf(l("a"), l("b")),
+                    random
+                )
+            )
+
+            val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+            actual shouldBe expected
+        }
+
+        "parses dice pool arrays" {
+            val input = """
+                root:
+                  - d4 _: ["a","b","c"]
+                  - d6 _: ["d3 x","d5 y","d7 z"]
+            """.trimIndent()
+
+            val expected = mapOf(
+                "root" to d(
+                    listOf(4, 6),
+                    listOf(
+                        r(
+                            listOf(1,1,1),
+                            listOf(l("a"),l("b"),l("c")),
+                            random
+                        ),
+                        d(
+                            listOf(3,5,7),
+                            listOf(l("x"),l("y"),l("z")),
+                            random
+                        )
+                    ),
+                    random
+                )
+            )
+
+            val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+            actual shouldBe expected
+        }
+
+        "throws error if there is a mix of int weights and dice pool weights" {
+            val input = """
+                root:
+                  - d4 a
+                  - d6 b
+                  - 3 c
+                  - 12 d
+            """.trimIndent()
+
+            shouldThrow<Exception> {
+                readTreeFromString(input, identityMapper, concatCombiner, random)
+            }.message shouldBe "Dice pool and int weights are mixed in 'root'"
+        }
+
+        "throws error if not all entries have a dice value" {
+            val input = """
+                root:
+                  - d4 a
+                  - d6 b
+                  - c
+            """.trimIndent()
+
+            shouldThrow<Exception> {
+                readTreeFromString(input, identityMapper, concatCombiner, random)
+            }.message shouldBe "Dice pool and int weights are mixed in 'root'"
+        }
+    }
+
     "readTreeFromFile" - {
         "reads the correct tree" {
             val path = Thread.currentThread()

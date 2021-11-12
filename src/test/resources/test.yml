@@ -43,3 +43,10 @@ compositeRootCopy: *ref
 arrayOfArays:
   - [x,y,z]
   - [a,b,c]
+simpleDicePool:
+  - d4 aa
+  - d6 bb
+  - d20 cc
+complexDicePool:
+  - d6 _: [a,b,c]
+  - d8 _: [e,f,g]

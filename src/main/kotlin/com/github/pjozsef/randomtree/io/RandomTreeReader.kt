@@ -76,7 +76,8 @@ fun <T> readTreeFromJsonNode(
     val container = mutableMapOf<String, RandomTree<T>>()
     root.fields().asSequence().forEach { (key, value) ->
         when (value) {
-            is ArrayNode -> container[key.dropSpecial()] = readArray(key, value, mapper, combiner, random, container, adjustRelativeWeight)
+            is ArrayNode -> container[key.dropSpecial()] =
+                readArray(key, value, mapper, combiner, random, container, adjustRelativeWeight)
             is ObjectNode -> if (value.isEmpty) {
                 container[key] = readEmptyNode(key, mapper)
             } else {
@@ -134,8 +135,16 @@ private fun <T> readArray(
                             container,
                             adjustRelativeWeight
                         )
-                        val multiplier = if(adjustRelativeWeight) nestedValue.elements().asSequence().toList().size else 1
-                        nestedWeight.toInt() * multiplier to randomNode
+                        when (nestedWeight) {
+                            is IntWeight -> {
+                                val multiplier =
+                                    if (adjustRelativeWeight) {
+                                        nestedValue.elements().asSequence().toList().size
+                                    } else 1
+                                IntWeight(nestedWeight.value * multiplier) to randomNode
+                            }
+                            is DicePoolWeight -> nestedWeight to randomNode
+                        }
                     }
                     is ObjectNode -> {
                         val composite = readCompositeNode(
@@ -156,15 +165,21 @@ private fun <T> readArray(
     }.toList().let {
         if (arrayName.startsWith("^")) {
             it.map { (times, node) ->
-                if (times == DEFAULT_WEIGHT) {
-                    node
-                } else {
-                    (1..times.toInt()).map { node }.let(::TreeCollection)
+                when (times) {
+                    DEFAULT_WEIGHT -> node
+                    is DicePoolWeight -> node
+                    is IntWeight -> (1..times.value).map { node }.let(::TreeCollection)
                 }
             }.let(::TreeCollection)
         } else {
             val (weights, nodes) = it.unzip()
-            RandomNode(weights, nodes, random)
+            validateWeights(weights)
+            val numericWeights = weights.map { it.value }
+            when (weights.first()) {
+                is IntWeight -> RandomNode(numericWeights, nodes, random)
+                is DicePoolWeight -> DicePoolNode(numericWeights, nodes, random)
+            }
+
         }
     }
 
@@ -224,28 +239,59 @@ private fun ValueNode.text() = when (this) {
     else -> error("Unsupported type for LeafNode: ${this::class.java}")
 }
 
-internal fun extractValuesFrom(text: String): Pair<Number, String> {
-    val trimmedText = text.trim()
-    return weightNameRegex.matchEntire(trimmedText)?.let {
-        val weight = it.groups.get("weight")?.value?.toInt() ?: error("Regex did not match Node text: $text")
-        val name = it.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
+internal sealed interface Weight {
+    val value: Int
+}
 
-        weight to name
-    } ?: nameRegex.matchEntire(trimmedText)?.let {
+@JvmInline
+private value class IntWeight(override val value: Int) : Weight
+
+@JvmInline
+private value class DicePoolWeight(override val value: Int) : Weight
+
+internal fun extractValuesFrom(text: String): Pair<Weight, String> {
+    val trimmedText = text.trim()
+    return intWeightNameRegex.matchEntire(trimmedText)?.toWeightNamePair(
+        text,
+        ::IntWeight
+    ) ?: diceWeightNameRegex.matchEntire(trimmedText)?.toWeightNamePair(
+        text,
+        ::DicePoolWeight
+    ) ?: nameRegex.matchEntire(trimmedText)?.let {
         val name = it.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
 
         DEFAULT_WEIGHT to name
     } ?: error("Regex did not match Node text: $text")
 }
 
+private fun MatchResult.toWeightNamePair(text: String, weightFn: (Int) -> Weight): Pair<Weight, String> {
+    val weight = this.groups.get("weight")?.value?.toInt() ?: error("Regex did not match Node text: $text")
+    val name = this.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
+
+    return weightFn(weight) to name
+}
+
 private fun String.dropSpecial() = this.replace("^", "")
 
-private val weightNameRegex by lazy {
+private val intWeightNameRegex by lazy {
     Regex("(?<weight>[1-9][0-9]*) +(?<name>.+)")
+}
+
+private val diceWeightNameRegex by lazy {
+    Regex("d(?<weight>[1-9][0-9]*) +(?<name>.+)")
 }
 
 private val nameRegex by lazy {
     Regex("(?<name>.+)")
 }
 
-private const val DEFAULT_WEIGHT = 1
+private val DEFAULT_WEIGHT = IntWeight(1)
+
+private fun validateWeights(weights: List<Weight>) {
+    val allInt = weights.all { it is IntWeight }
+    val allDice = weights.all { it is DicePoolWeight }
+
+    if (!(allInt || allDice)) {
+        error("Dice pool and int weights are mixed in 'root'")
+    }
+}
