@@ -77,11 +77,12 @@ fun <T> readTreeFromJsonNode(
     root.fields().asSequence().forEach { (key, value) ->
         when (value) {
             is ArrayNode -> container[key.dropSpecial()] =
-                readArray(key, value, mapper, combiner, random, container, adjustRelativeWeight)
+                readArray(key, key, value, mapper, combiner, random, container, adjustRelativeWeight)
             is ObjectNode -> if (value.isEmpty) {
                 container[key] = readEmptyNode(key, mapper)
             } else {
                 container[key] = readCompositeNode(
+                    key,
                     key,
                     value,
                     mapper,
@@ -100,6 +101,7 @@ fun <T> readTreeFromJsonNode(
 
 private fun <T> readArray(
     arrayName: String,
+    path: String,
     array: ArrayNode,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
@@ -108,7 +110,7 @@ private fun <T> readArray(
     adjustRelativeWeight: Boolean
 ): RandomTree<T> =
     array.elements().asSequence().mapIndexed { i, elementValue ->
-        val arrayIndexName = "$arrayName[${i+1}]"
+        val arrayIndexName = "$path[${i+1}]"
         when (elementValue) {
             is ValueNode -> {
                 val (weight, name) = elementValue.text(arrayIndexName).let(::extractValuesFrom)
@@ -116,6 +118,7 @@ private fun <T> readArray(
                 weight to node
             }
             is ArrayNode -> DEFAULT_WEIGHT to readArray(
+                "",
                 arrayIndexName,
                 elementValue,
                 mapper,
@@ -130,6 +133,7 @@ private fun <T> readArray(
                 when (nestedValue) {
                     is ArrayNode -> {
                         val randomNode = readArray(
+                            name,
                             "$arrayIndexName>$name",
                             nestedValue,
                             mapper,
@@ -151,6 +155,7 @@ private fun <T> readArray(
                     }
                     is ObjectNode -> {
                         val composite = readCompositeNode(
+                            name,
                             "$arrayIndexName>$name",
                             nestedValue,
                             mapper,
@@ -189,6 +194,7 @@ private fun <T> readArray(
 
 private fun <T> readCompositeNode(
     key: String,
+    path: String,
     value: ObjectNode,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
@@ -199,7 +205,8 @@ private fun <T> readCompositeNode(
     value.fields().asSequence().map { (elementKey, elementValue) ->
         when (elementValue) {
             is ArrayNode -> elementKey to readArray(
-                "$key>$elementKey",
+                elementKey,
+                "$path>$elementKey",
                 elementValue,
                 mapper,
                 combiner,
@@ -208,7 +215,8 @@ private fun <T> readCompositeNode(
                 adjustRelativeWeight
             )
             is ObjectNode -> elementKey to readCompositeNode(
-                "$key>$elementKey",
+                elementKey,
+                "$path>$elementKey",
                 elementValue,
                 mapper,
                 combiner,
@@ -217,7 +225,7 @@ private fun <T> readCompositeNode(
                 adjustRelativeWeight
             )
             is TextNode -> elementKey to extractLeafOrReference(elementValue.textValue(), mapper, container)
-            else -> error("Unsupported type for CompositeNode: ${elementValue.className} at: $key>$elementKey")
+            else -> error("Unsupported type for CompositeNode: ${elementValue.className} at: $path>$elementKey")
         }
     }.toMap().let {
         CompositeNode(it, combiner)
@@ -238,11 +246,11 @@ private fun <T> extractLeafOrReference(
     LeafNode(mapper(key))
 }
 
-private fun ValueNode.text(key: String) = when (this) {
+private fun ValueNode.text(path: String) = when (this) {
     is TextNode -> this.textValue()
     is NumericNode -> this.numberValue().toString()
     is BooleanNode -> this.booleanValue().toString()
-    else -> error("Unsupported type for LeafNode: ${this.className} at: $key")
+    else -> error("Unsupported type for LeafNode: ${this.className} at: $path")
 }
 
 internal sealed interface Weight {
