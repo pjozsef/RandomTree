@@ -82,6 +82,7 @@ fun <T> readTreeFromJsonNode(
                 container[key] = readEmptyNode(key, mapper)
             } else {
                 container[key] = readCompositeNode(
+                    key,
                     value,
                     mapper,
                     combiner,
@@ -107,14 +108,15 @@ private fun <T> readArray(
     adjustRelativeWeight: Boolean
 ): RandomTree<T> =
     array.elements().asSequence().mapIndexed { i, elementValue ->
+        val arrayIndexName = "$arrayName[${i+1}]"
         when (elementValue) {
             is ValueNode -> {
-                val (weight, name) = elementValue.text(arrayName).let(::extractValuesFrom)
+                val (weight, name) = elementValue.text(arrayIndexName).let(::extractValuesFrom)
                 val node = extractLeafOrReference(name, mapper, container)
                 weight to node
             }
             is ArrayNode -> DEFAULT_WEIGHT to readArray(
-                "$arrayName[$i]",
+                arrayIndexName,
                 elementValue,
                 mapper,
                 combiner,
@@ -128,7 +130,7 @@ private fun <T> readArray(
                 when (nestedValue) {
                     is ArrayNode -> {
                         val randomNode = readArray(
-                            name,
+                            "$arrayIndexName>$name",
                             nestedValue,
                             mapper,
                             combiner,
@@ -149,6 +151,7 @@ private fun <T> readArray(
                     }
                     is ObjectNode -> {
                         val composite = readCompositeNode(
+                            "$arrayIndexName>$name",
                             nestedValue,
                             mapper,
                             combiner,
@@ -158,10 +161,10 @@ private fun <T> readArray(
                         )
                         nestedWeight to composite
                     }
-                    else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue.className} at: $nestedKey")
+                    else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue.className} at: $arrayIndexName>$name")
                 }
             }
-            else -> error("Unsupported type for RandomNode: ${elementValue::class.java} at: $arrayName")
+            else -> error("Unsupported type for RandomNode: ${elementValue::class.java} at: $arrayIndexName")
         }
     }.toList().let {
         if (arrayName.startsWith("^")) {
@@ -185,6 +188,7 @@ private fun <T> readArray(
     }
 
 private fun <T> readCompositeNode(
+    key: String,
     value: ObjectNode,
     mapper: (String) -> T,
     combiner: (Map<String, T>) -> T,
@@ -195,7 +199,7 @@ private fun <T> readCompositeNode(
     value.fields().asSequence().map { (elementKey, elementValue) ->
         when (elementValue) {
             is ArrayNode -> elementKey to readArray(
-                elementKey,
+                "$key>$elementKey",
                 elementValue,
                 mapper,
                 combiner,
@@ -204,6 +208,7 @@ private fun <T> readCompositeNode(
                 adjustRelativeWeight
             )
             is ObjectNode -> elementKey to readCompositeNode(
+                "$key>$elementKey",
                 elementValue,
                 mapper,
                 combiner,
@@ -212,7 +217,7 @@ private fun <T> readCompositeNode(
                 adjustRelativeWeight
             )
             is TextNode -> elementKey to extractLeafOrReference(elementValue.textValue(), mapper, container)
-            else -> error("Unsupported type for CompositeNode: ${elementValue.className} at: $elementKey")
+            else -> error("Unsupported type for CompositeNode: ${elementValue.className} at: $key>$elementKey")
         }
     }.toMap().let {
         CompositeNode(it, combiner)
