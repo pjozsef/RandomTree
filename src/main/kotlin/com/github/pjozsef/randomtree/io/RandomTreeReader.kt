@@ -91,7 +91,7 @@ fun <T> readTreeFromJsonNode(
                 )
             }
             is TextNode -> container[key] =  extractLeafOrReference(value.textValue(), mapper, container)
-            else -> error("Unsupported type for root: ${value::class.java}")
+            else -> error("Unsupported type for root: ${value.className} at: $key")
         }
     }
     return container.toMap()
@@ -106,15 +106,15 @@ private fun <T> readArray(
     container: Map<String, RandomTree<T>>,
     adjustRelativeWeight: Boolean
 ): RandomTree<T> =
-    array.elements().asSequence().map { elementValue ->
+    array.elements().asSequence().mapIndexed { i, elementValue ->
         when (elementValue) {
             is ValueNode -> {
-                val (weight, name) = elementValue.text().let(::extractValuesFrom)
+                val (weight, name) = elementValue.text(arrayName).let(::extractValuesFrom)
                 val node = extractLeafOrReference(name, mapper, container)
                 weight to node
             }
             is ArrayNode -> DEFAULT_WEIGHT to readArray(
-                "",
+                "$arrayName[$i]",
                 elementValue,
                 mapper,
                 combiner,
@@ -158,10 +158,10 @@ private fun <T> readArray(
                         )
                         nestedWeight to composite
                     }
-                    else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue::class.java}")
+                    else -> error("Unsopported type for CompositeNode inside RandomNode: ${nestedValue.className} at: $nestedKey")
                 }
             }
-            else -> error("Unsupported type for RandomNode: ${elementValue::class.java}")
+            else -> error("Unsupported type for RandomNode: ${elementValue::class.java} at: $arrayName")
         }
     }.toList().let {
         if (arrayName.startsWith("^")) {
@@ -174,7 +174,7 @@ private fun <T> readArray(
             }.let(::TreeCollection)
         } else {
             val (weights, nodes) = it.unzip()
-            validateWeights(weights)
+            validateWeights(weights, arrayName)
             val numericWeights = weights.map { it.value }
             when (weights.first()) {
                 is IntWeight -> RandomNode(numericWeights, nodes, random)
@@ -212,7 +212,7 @@ private fun <T> readCompositeNode(
                 adjustRelativeWeight
             )
             is TextNode -> elementKey to extractLeafOrReference(elementValue.textValue(), mapper, container)
-            else -> error("Unsupported type for CompositeNode: ${elementValue::class.java}")
+            else -> error("Unsupported type for CompositeNode: ${elementValue.className} at: $elementKey")
         }
     }.toMap().let {
         CompositeNode(it, combiner)
@@ -233,11 +233,11 @@ private fun <T> extractLeafOrReference(
     LeafNode(mapper(key))
 }
 
-private fun ValueNode.text() = when (this) {
+private fun ValueNode.text(key: String) = when (this) {
     is TextNode -> this.textValue()
     is NumericNode -> this.numberValue().toString()
     is BooleanNode -> this.booleanValue().toString()
-    else -> error("Unsupported type for LeafNode: ${this::class.java}")
+    else -> error("Unsupported type for LeafNode: ${this.className} at: $key")
 }
 
 internal sealed interface Weight {
@@ -288,11 +288,14 @@ private val nameRegex by lazy {
 
 private val DEFAULT_WEIGHT = IntWeight(1)
 
-private fun validateWeights(weights: List<Weight>) {
+private fun validateWeights(weights: List<Weight>, arrayName: String) {
     val allInt = weights.all { it is IntWeight }
     val allDice = weights.all { it is DicePoolWeight }
 
     if (!(allInt || allDice)) {
-        error("Dice pool and int weights are mixed in 'root'")
+        error("Dice pool and int weights are mixed at: $arrayName")
     }
 }
+
+private val Any.className: String
+    get() = this::class.java.simpleName

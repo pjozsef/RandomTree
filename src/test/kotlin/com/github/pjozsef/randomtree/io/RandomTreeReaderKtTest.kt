@@ -546,7 +546,7 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             shouldThrow<Exception> {
                 readTreeFromString(input, identityMapper, concatCombiner, random)
-            }.message shouldBe "Dice pool and int weights are mixed in 'root'"
+            }.message shouldBe "Dice pool and int weights are mixed at: root"
         }
 
         "throws error if not all entries have a dice value" {
@@ -559,7 +559,7 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             shouldThrow<Exception> {
                 readTreeFromString(input, identityMapper, concatCombiner, random)
-            }.message shouldBe "Dice pool and int weights are mixed in 'root'"
+            }.message shouldBe "Dice pool and int weights are mixed at: root"
         }
     }
 

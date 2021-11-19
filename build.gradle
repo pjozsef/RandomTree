@@ -25,6 +25,12 @@ repositories {
 
 test {
     useJUnitPlatform()
+
+    testLogging {
+        showStandardStreams = true
+        events = ["failed", "skipped"]
+        exceptionFormat = 'full'
+    }
 }
 
 dependencies {
