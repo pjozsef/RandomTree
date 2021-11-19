@@ -563,6 +563,22 @@ class RandomTreeReaderKtTest : FreeSpec({
         }
     }
 
+    "text node" - {
+        "parses plain text node" {
+            val input = """
+                root: text
+            """.trimIndent()
+
+            val expected = mapOf(
+                "root" to l("text")
+            )
+
+            val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+            actual shouldBe expected
+        }
+    }
+
     "readTreeFromFile" - {
         "reads the correct tree" {
             val path = Thread.currentThread()

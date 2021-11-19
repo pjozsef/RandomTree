@@ -90,6 +90,7 @@ fun <T> readTreeFromJsonNode(
                     adjustRelativeWeight
                 )
             }
+            is TextNode -> container[key] =  extractLeafOrReference(value.textValue(), mapper, container)
             else -> error("Unsupported type for root: ${value::class.java}")
         }
     }

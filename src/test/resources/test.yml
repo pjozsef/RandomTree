@@ -50,3 +50,7 @@ simpleDicePool:
 complexDicePool:
   - d6 _: [a,b,c]
   - d8 _: [e,f,g]
+rootLeafText: textValue
+compositeWithLeaf:
+  a: a
+  b: b
