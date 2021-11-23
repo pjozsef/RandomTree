@@ -92,7 +92,7 @@ fun <T> readTreeFromJsonNode(
                     adjustRelativeWeight
                 )
             }
-            is TextNode -> container[key] =  extractLeafOrReference(value.textValue(), mapper, container)
+            is TextNode -> container[key] = extractLeafOrReference(value.textValue(), mapper, container)
             else -> error("Unsupported type for root: ${value.className} at: $key")
         }
     }
@@ -110,7 +110,7 @@ private fun <T> readArray(
     adjustRelativeWeight: Boolean
 ): RandomTree<T> =
     array.elements().asSequence().mapIndexed { i, elementValue ->
-        val arrayIndexName = "$path[${i+1}]"
+        val arrayIndexName = "$path[${i + 1}]"
         when (elementValue) {
             is ValueNode -> {
                 val (weight, name) = elementValue.text(arrayIndexName).let(::extractValuesFrom)
@@ -305,10 +305,22 @@ private fun validateWeights(weights: List<Weight>, arrayName: String) {
     val allInt = weights.all { it is IntWeight }
     val allDice = weights.all { it is DicePoolWeight }
 
+    val extraWeights = weights.map { it.className } - listOf(
+        IntWeight::class.java.simpleName,
+        DicePoolWeight::class.java.simpleName
+    )
+
+    val extraWeightsString = if(extraWeights.isNotEmpty()){
+        " Additional invalid types found: ${extraWeights.joinToString()}"
+    } else {
+        ""
+    }
+
     if (!(allInt || allDice)) {
-        error("Dice pool and int weights are mixed at: $arrayName")
+        error("Dice pool and int weights are mixed at: $arrayName.$extraWeightsString")
     }
 }
+
 
 private val Any.className: String
     get() = this::class.java.simpleName

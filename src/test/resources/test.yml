@@ -54,3 +54,10 @@ rootLeafText: textValue
 compositeWithLeaf:
   a: a
   b: b
+^variableSizedCollection:
+  - leaf
+  - 4 4elements
+  - 1-3 between one and three elements
+  - d4 between 1-4
+  - 2d20 a lot
+  - 10% has only 10% chance

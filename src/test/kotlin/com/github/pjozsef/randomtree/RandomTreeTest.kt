@@ -6,6 +6,7 @@ import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.*
@@ -136,6 +137,22 @@ class RandomTreeTest : FreeSpec({
             whenever(random.nextInt(10)).thenReturn(4)
 
             node.value shouldBe "3"
+        }
+    }
+
+    "repeaterNode" - {
+        "repeatedly calls subnode 'repeat' times" {
+            val times = 3
+            val repeater = mock<Repeater> {
+                on { getAmount() } doReturn times
+            }
+            val subNode = LeafNode("value")
+            val repeaterNode = RepeaterNode(
+                repeater, subNode
+            )
+
+            repeaterNode.value shouldBe "value"
+
         }
     }
 })

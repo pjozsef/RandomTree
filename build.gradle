@@ -35,7 +35,7 @@ test {
 
 dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-    implementation 'com.github.pjozsef:WeightedRandom:1.0.0'
+    implementation 'com.github.pjozsef:WeightedRandom:1.1.0'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.5'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.12.5'
 

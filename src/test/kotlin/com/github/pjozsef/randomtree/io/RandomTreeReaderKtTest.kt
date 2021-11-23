@@ -3,7 +3,11 @@ package com.github.pjozsef.randomtree.io
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.github.pjozsef.d
 import com.github.pjozsef.factory.*
+import com.github.pjozsef.randomtree.ConstantRepeater
+import com.github.pjozsef.randomtree.DiceRollRepeater
+import com.github.pjozsef.randomtree.RangeRepeater
 import io.kotlintest.assertSoftly
 import io.kotlintest.data.suspend.forall
 import io.kotlintest.shouldBe
@@ -355,8 +359,9 @@ class RandomTreeReaderKtTest : FreeSpec({
 
         actual shouldBe expected
     }
-    "treeCollection with inline definitions" {
-        val input = """
+    "treeCollection" - {
+        "treeCollection with inline definitions" {
+            val input = """
                 ^collection: 
                     - inlineLeaf
                     - inlineRandom:
@@ -377,47 +382,48 @@ class RandomTreeReaderKtTest : FreeSpec({
                     - 3 inlineWithRepetition
             """.trimIndent()
 
-        val expected = mapOf(
-            "collection" to coll(
-                l("inlineLeaf"),
-                r(
-                    listOf(1, 1, 1),
-                    listOf(l("a"), l("b"), l("c")),
-                    random
-                ),
-                c(
-                    mapOf(
-                        "first" to r(
-                            listOf(1, 1),
-                            listOf(l("0"), l("1")),
-                            random
-                        ),
-                        "second" to r(
-                            listOf(1, 1),
-                            listOf(l("2"), l("3")),
-                            random
-                        )
-                    ), concatCombiner
-                ),
-                coll(
-                    l("x"),
-                    l("y"),
-                    l("z")
-                ),
-                coll(
-                    l("inlineWithRepetition"),
-                    l("inlineWithRepetition"),
-                    l("inlineWithRepetition")
+            val expected = mapOf(
+                "collection" to coll(
+                    l("inlineLeaf"),
+                    r(
+                        listOf(1, 1, 1),
+                        listOf(l("a"), l("b"), l("c")),
+                        random
+                    ),
+                    c(
+                        mapOf(
+                            "first" to r(
+                                listOf(1, 1),
+                                listOf(l("0"), l("1")),
+                                random
+                            ),
+                            "second" to r(
+                                listOf(1, 1),
+                                listOf(l("2"), l("3")),
+                                random
+                            )
+                        ), concatCombiner
+                    ),
+                    coll(
+                        l("x"),
+                        l("y"),
+                        l("z")
+                    ),
+                    coll(
+                        l("inlineWithRepetition"),
+                        l("inlineWithRepetition"),
+                        l("inlineWithRepetition")
+                    )
                 )
             )
-        )
 
-        val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+            val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
 
-        actual shouldBe expected
-    }
-    "treeCollection with references" {
-        val input = """
+            actual shouldBe expected
+        }
+
+        "treeCollection with references" {
+            val input = """
                 referenceLeaf: {}
                 referenceWithRepetition: {}
                 ^collection: 
@@ -425,23 +431,74 @@ class RandomTreeReaderKtTest : FreeSpec({
                     - 3 :referenceWithRepetition
             """.trimIndent()
 
-        val expected = mapOf(
-            "referenceLeaf" to l("referenceLeaf"),
-            "referenceWithRepetition" to l("referenceWithRepetition"),
-            "collection" to coll(
-                l("referenceLeaf"),
-                coll(
-                    l("referenceWithRepetition"),
-                    l("referenceWithRepetition"),
-                    l("referenceWithRepetition")
+            val expected = mapOf(
+                "referenceLeaf" to l("referenceLeaf"),
+                "referenceWithRepetition" to l("referenceWithRepetition"),
+                "collection" to coll(
+                    l("referenceLeaf"),
+                    coll(
+                        l("referenceWithRepetition"),
+                        l("referenceWithRepetition"),
+                        l("referenceWithRepetition")
+                    )
                 )
             )
-        )
 
-        val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+            val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
 
-        actual shouldBe expected
+            actual shouldBe expected
+        }
+
+        "treeCollection with varying amount descriptors" {
+            val input = """
+                ^collection: 
+                    - inlineLeaf
+                    - 4 4elements
+                    - 1-3 chooses up to 3 elements from:
+                        - a
+                        - 2 b
+                        - c
+                    - 1d4 between 1-4
+                    - d6 between 1-6
+                    - 2d20 a lot
+            """.trimIndent()
+
+            val expected = mapOf(
+                "collection" to coll(
+                    l("inlineLeaf"),
+                    rep(
+                        ConstantRepeater(4),
+                        l("4elements")
+                    ),
+                    rep(
+                        RangeRepeater(1..3, random),
+                        r(
+                            listOf(1,2,3),
+                            listOf(l("a"),l("b"),l("c")),
+                            random
+                        )
+                    ),
+                    rep(
+                        DiceRollRepeater(1 d 4),
+                        l("between 1-4")
+                    ),
+                    rep(
+                        DiceRollRepeater(1 d 6),
+                        l("between 1-6")
+                    ),
+                    rep(
+                        DiceRollRepeater(2 d 20),
+                        l("a lot")
+                    )
+                )
+            )
+
+            val actual = readTreeFromString(input, identityMapper, concatCombiner, random)
+
+            actual shouldBe expected
+        }
     }
+
     "adjusts relative weight when 'relativeWeight' is enabled" {
         val input = """
             node:
@@ -546,7 +603,7 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             shouldThrow<Exception> {
                 readTreeFromString(input, identityMapper, concatCombiner, random)
-            }.message shouldBe "Dice pool and int weights are mixed at: root"
+            }.message shouldBe "Dice pool and int weights are mixed at: root."
         }
 
         "throws error if not all entries have a dice value" {
@@ -559,7 +616,7 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             shouldThrow<Exception> {
                 readTreeFromString(input, identityMapper, concatCombiner, random)
-            }.message shouldBe "Dice pool and int weights are mixed at: root"
+            }.message shouldBe "Dice pool and int weights are mixed at: root."
         }
     }
 

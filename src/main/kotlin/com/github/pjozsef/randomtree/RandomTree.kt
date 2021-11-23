@@ -21,6 +21,11 @@ data class RandomNode<T>(
     )
 }
 
+data class RepeaterNode<T>(
+    val repeater: Repeater,
+    val node: RandomTree<T>
+): RandomTree<T>()
+
 data class CompositeNode<T>(
     val components: Map<String, RandomTree<T>>,
     val combiner: (Map<String, T>) -> T
@@ -46,6 +51,7 @@ sealed class RandomTree<T> {
             is RandomNode<T> -> this.randomBranch()
             is DicePoolNode<T> -> this.randomBranch()
             is TreeCollection<T> -> trees.first().value
+            is RepeaterNode<T> -> node.value
         }
 }
 
@@ -77,3 +83,4 @@ private fun <T> DicePoolNode<T>.randomBranch() =
         branches[it.index].value
     }
 
+private fun <T> RepeaterNode<T>.repeatedValue() = node.value

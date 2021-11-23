@@ -15,3 +15,5 @@ fun <T> d(dicePool: List<Number>, branches: List<RandomTree<T>>, random: Random)
     DicePoolNode(dicePool, branches, random)
 
 fun <T> coll(vararg trees: RandomTree<T>) = TreeCollection(trees.asList())
+
+fun <T> rep(repeater: Repeater, node: RandomTree<T>) = RepeaterNode(repeater, node)
