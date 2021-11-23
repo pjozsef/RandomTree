@@ -141,18 +141,21 @@ class RandomTreeTest : FreeSpec({
     }
 
     "repeaterNode" - {
-        "repeatedly calls subnode 'repeat' times" {
-            val times = 3
-            val repeater = mock<Repeater> {
-                on { getAmount() } doReturn times
+
+        forall(
+            row("calls subnode n times", 3, listOf("value", "value", "value")),
+            row("returns empty list if repeat amount is 0", 0, emptyList()),
+        ) { test, times, expected ->
+            test{
+                val repeater = mock<Repeater> {
+                    on { getAmount() } doReturn times
+                }
+                val repeaterNode = RepeaterNode(
+                    repeater, LeafNode("value")
+                )
+
+                repeaterNode.values shouldBe expected
             }
-            val subNode = LeafNode("value")
-            val repeaterNode = RepeaterNode(
-                repeater, subNode
-            )
-
-            repeaterNode.value shouldBe "value"
-
         }
     }
 })
