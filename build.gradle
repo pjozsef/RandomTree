@@ -41,6 +41,7 @@ dependencies {
 
     testImplementation 'io.kotlintest:kotlintest-runner-junit5:3.3.2'
     testImplementation "org.mockito.kotlin:mockito-kotlin:4.0.0"
+    testImplementation 'org.mockito:mockito-inline:4.0.0'
     testRuntimeOnly 'org.slf4j:slf4j-simple:1.7.30'
 }
 

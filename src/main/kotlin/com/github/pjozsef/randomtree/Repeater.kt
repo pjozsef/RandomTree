@@ -1,6 +1,7 @@
 package com.github.pjozsef.randomtree
 
 import com.github.pjozsef.DiceRoll
+import com.github.pjozsef.WeightedCoin
 import java.util.*
 
 interface Repeater {
@@ -24,4 +25,10 @@ data class RangeRepeater(val range: IntRange, val random: Random): Repeater {
 
 data class DiceRollRepeater(val diceRoll: DiceRoll): Repeater {
     override fun getAmount() = diceRoll.roll()
+}
+
+data class PercentageRepeater(val percentage: Double, val random: Random): Repeater {
+    val coin = WeightedCoin(percentage, random)
+
+    override fun getAmount() = if(coin.flip()) 1 else 0
 }

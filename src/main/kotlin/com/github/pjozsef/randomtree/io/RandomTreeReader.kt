@@ -179,6 +179,7 @@ private fun <T> readArray(
                     is IntWeight -> ConstantRepeater(times.value)
                     is DicePoolWeight -> DiceRollRepeater(DiceRoll.BaseDiceRoll(times.times, times.dieType, random))
                     is RangeWeight -> RangeRepeater(times.start..times.end, random)
+                    is PercentageWeight -> PercentageRepeater(times.percentage, random)
                 }
                 RepeaterNode(repeater, node)
             }.let(::TreeCollection)
@@ -272,6 +273,11 @@ internal data class RangeWeight(val start: Int, val end: Int) : Weight {
         get() = error("Range weight has no value associated!")
 }
 
+internal data class PercentageWeight(val percentage: Double) : Weight {
+    override val value: Int
+        get() = error("Range weight has no value associated!")
+}
+
 internal fun extractValuesFrom(text: String): Pair<Weight, String> {
     val trimmedText = text.trim()
     return rangeWeightNameRegex.matchEntire(trimmedText)?.let { matchEntire ->
@@ -284,6 +290,10 @@ internal fun extractValuesFrom(text: String): Pair<Weight, String> {
         val die = matchEntire.groups.get("die")?.value?.toInt() ?: error("Regex did not match Node text: $text")
         val name = matchEntire.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
         DicePoolWeight(num, die) to name
+    } ?: percentageWeightNameRegex.matchEntire(trimmedText)?.let { matchEntire ->
+        val percentage = matchEntire.groups.get("percentage")?.value?.toInt() ?: error("Regex did not match Node text: $text")
+        val name = matchEntire.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
+        PercentageWeight(percentage.toDouble() / 100) to name
     } ?: intWeightNameRegex.matchEntire(trimmedText)?.let { matchEntire ->
         val weight = matchEntire.groups.get("weight")?.value?.toInt() ?: error("Regex did not match Node text: $text")
         val name = matchEntire.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
@@ -296,6 +306,10 @@ internal fun extractValuesFrom(text: String): Pair<Weight, String> {
 }
 
 private fun String.dropSpecial() = this.replace("^", "")
+
+private val percentageWeightNameRegex by lazy {
+    Regex("(?<percentage>[1-9][0-9]*)% +(?<name>.+)")
+}
 
 private val intWeightNameRegex by lazy {
     Regex("(?<weight>[1-9][0-9]*) +(?<name>.+)")

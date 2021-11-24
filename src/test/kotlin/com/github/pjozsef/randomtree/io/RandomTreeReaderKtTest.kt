@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.github.pjozsef.DiceRoll
+import com.github.pjozsef.WeightedCoin
 import com.github.pjozsef.factory.*
 import com.github.pjozsef.randomtree.ConstantRepeater
 import com.github.pjozsef.randomtree.DiceRollRepeater
+import com.github.pjozsef.randomtree.PercentageRepeater
 import com.github.pjozsef.randomtree.RangeRepeater
 import io.kotlintest.assertSoftly
 import io.kotlintest.data.suspend.forall
@@ -486,6 +488,7 @@ class RandomTreeReaderKtTest : FreeSpec({
                     - 1d4 between 1-4
                     - d6 between 1-6
                     - 2d20 a lot
+                    - 50% maybe yes, maybe not
             """.trimIndent()
 
             val expected = mapOf(
@@ -525,6 +528,10 @@ class RandomTreeReaderKtTest : FreeSpec({
                     rep(
                         DiceRollRepeater(DiceRoll.BaseDiceRoll(2, 20, random)),
                         l("a lot")
+                    ),
+                    rep(
+                        PercentageRepeater(0.5, random),
+                        l("maybe yes, maybe not")
                     )
                 )
             )

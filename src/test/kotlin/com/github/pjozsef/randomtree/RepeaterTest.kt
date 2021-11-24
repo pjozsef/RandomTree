@@ -2,9 +2,7 @@ package com.github.pjozsef.randomtree
 
 import com.github.pjozsef.DiceRoll
 import io.kotlintest.data.suspend.forall
-import io.kotlintest.inspectors.forAll
 import io.kotlintest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotlintest.matchers.numerics.shouldBeInRange
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.FreeSpec
 import io.kotlintest.tables.row
@@ -45,10 +43,26 @@ class RepeaterTest : FreeSpec({
         "returns result of dice roll" {
             val expectedResult = 7
             val diceRoll = mock<DiceRoll> {
-                on{ roll() } doReturn expectedResult
+                on { roll() } doReturn expectedResult
             }
             val repeater = DiceRollRepeater(diceRoll)
             repeater.getAmount() shouldBe expectedResult
+        }
+    }
+
+    "percentage repeater" - {
+        forall(
+            row("returns one if coinflip passes", 0.7, 0.3, 1),
+            row("returns one if coinflip passes at boundary", 0.7, 0.7, 1),
+            row("returns zero if coinflip fails close to boundary", 0.6, 0.6001, 0),
+            row("returns zero if coinflip fails", 0.9, 0.99, 0),
+        ) { test, percentage, randomRoll, expected ->
+            test {
+                val random = mock<Random> {
+                    on { nextDouble() } doReturn randomRoll
+                }
+                PercentageRepeater(percentage, random).getAmount() shouldBe expected
+            }
         }
     }
 })
