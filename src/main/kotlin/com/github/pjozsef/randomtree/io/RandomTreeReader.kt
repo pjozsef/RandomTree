@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.*
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.github.pjozsef.DiceRoll
 import com.github.pjozsef.randomtree.*
 import org.yaml.snakeyaml.Yaml
 import java.io.File
@@ -150,7 +151,7 @@ private fun <T> readArray(
                                     } else 1
                                 IntWeight(nestedWeight.value * multiplier) to randomNode
                             }
-                            is DicePoolWeight -> nestedWeight to randomNode
+                            else -> nestedWeight to randomNode
                         }
                     }
                     is ObjectNode -> {
@@ -174,11 +175,12 @@ private fun <T> readArray(
     }.toList().let {
         if (arrayName.startsWith("^")) {
             it.map { (times, node) ->
-                when (times) {
-                    DEFAULT_WEIGHT -> node
-                    is DicePoolWeight -> node
-                    is IntWeight -> (1..times.value).map { node }.let(::TreeCollection)
+                val repeater = when (times) {
+                    is IntWeight -> ConstantRepeater(times.value)
+                    is DicePoolWeight -> DiceRollRepeater(DiceRoll.BaseDiceRoll(times.times, times.dieType, random))
+                    is RangeWeight -> RangeRepeater(times.start..times.end, random)
                 }
+                RepeaterNode(repeater, node)
             }.let(::TreeCollection)
         } else {
             val (weights, nodes) = it.unzip()
@@ -187,6 +189,7 @@ private fun <T> readArray(
             when (weights.first()) {
                 is IntWeight -> RandomNode(numericWeights, nodes, random)
                 is DicePoolWeight -> DicePoolNode(numericWeights, nodes, random)
+                else -> error("Unsupported weight type as regular tree weight: ${weights.first().className} at: $arrayName")
             }
 
         }
@@ -257,32 +260,39 @@ internal sealed interface Weight {
     val value: Int
 }
 
-@JvmInline
-private value class IntWeight(override val value: Int) : Weight
+internal data class IntWeight(override val value: Int) : Weight
 
-@JvmInline
-private value class DicePoolWeight(override val value: Int) : Weight
+internal data class DicePoolWeight(val times: Int, val dieType: Int) : Weight {
+    override val value: Int
+        get() = dieType
+}
+
+internal data class RangeWeight(val start: Int, val end: Int) : Weight {
+    override val value: Int
+        get() = error("Range weight has no value associated!")
+}
 
 internal fun extractValuesFrom(text: String): Pair<Weight, String> {
     val trimmedText = text.trim()
-    return intWeightNameRegex.matchEntire(trimmedText)?.toWeightNamePair(
-        text,
-        ::IntWeight
-    ) ?: diceWeightNameRegex.matchEntire(trimmedText)?.toWeightNamePair(
-        text,
-        ::DicePoolWeight
-    ) ?: nameRegex.matchEntire(trimmedText)?.let {
+    return rangeWeightNameRegex.matchEntire(trimmedText)?.let { matchEntire ->
+        val start = matchEntire.groups.get("start")?.value?.toInt() ?: 1
+        val end = matchEntire.groups.get("end")?.value?.toInt() ?: error("Regex did not match Node text: $text")
+        val name = matchEntire.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
+        RangeWeight(start, end) to name
+    } ?: diceWeightNameRegex.matchEntire(trimmedText)?.let { matchEntire ->
+        val num = matchEntire.groups.get("num")?.value?.toInt() ?: 1
+        val die = matchEntire.groups.get("die")?.value?.toInt() ?: error("Regex did not match Node text: $text")
+        val name = matchEntire.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
+        DicePoolWeight(num, die) to name
+    } ?: intWeightNameRegex.matchEntire(trimmedText)?.let { matchEntire ->
+        val weight = matchEntire.groups.get("weight")?.value?.toInt() ?: error("Regex did not match Node text: $text")
+        val name = matchEntire.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
+        IntWeight(weight) to name
+    } ?: nameRegex.matchEntire(trimmedText)?.let {
         val name = it.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
 
         DEFAULT_WEIGHT to name
     } ?: error("Regex did not match Node text: $text")
-}
-
-private fun MatchResult.toWeightNamePair(text: String, weightFn: (Int) -> Weight): Pair<Weight, String> {
-    val weight = this.groups.get("weight")?.value?.toInt() ?: error("Regex did not match Node text: $text")
-    val name = this.groups.get("name")?.value ?: error("Regex did not match Node text: $text")
-
-    return weightFn(weight) to name
 }
 
 private fun String.dropSpecial() = this.replace("^", "")
@@ -292,7 +302,11 @@ private val intWeightNameRegex by lazy {
 }
 
 private val diceWeightNameRegex by lazy {
-    Regex("d(?<weight>[1-9][0-9]*) +(?<name>.+)")
+    Regex("(?<num>[1-9][0-9]*)?d(?<die>[1-9][0-9]*) +(?<name>.+)")
+}
+
+private val rangeWeightNameRegex by lazy {
+    Regex("(?<start>[0-9]+)?-(?<end>[1-9][0-9]*) +(?<name>.+)")
 }
 
 private val nameRegex by lazy {
@@ -310,7 +324,7 @@ private fun validateWeights(weights: List<Weight>, arrayName: String) {
         DicePoolWeight::class.java.simpleName
     )
 
-    val extraWeightsString = if(extraWeights.isNotEmpty()){
+    val extraWeightsString = if (extraWeights.isNotEmpty()) {
         " Additional invalid types found: ${extraWeights.joinToString()}"
     } else {
         ""

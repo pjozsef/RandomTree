@@ -3,7 +3,7 @@ package com.github.pjozsef.randomtree.io
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.github.pjozsef.d
+import com.github.pjozsef.DiceRoll
 import com.github.pjozsef.factory.*
 import com.github.pjozsef.randomtree.ConstantRepeater
 import com.github.pjozsef.randomtree.DiceRollRepeater
@@ -24,6 +24,7 @@ import java.util.*
 class RandomTreeReaderKtTest : FreeSpec({
 
     val random = Random()
+    val singleRepeater = ConstantRepeater(1)
     val identityMapper: (String) -> String = { it }
     val concatCombiner: (Map<String, String>) -> String = {
         it.toSortedMap().values.joinToString("_")
@@ -384,34 +385,54 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             val expected = mapOf(
                 "collection" to coll(
-                    l("inlineLeaf"),
-                    r(
-                        listOf(1, 1, 1),
-                        listOf(l("a"), l("b"), l("c")),
-                        random
+                    rep(
+                        singleRepeater,
+                        l("inlineLeaf")
                     ),
-                    c(
-                        mapOf(
-                            "first" to r(
-                                listOf(1, 1),
-                                listOf(l("0"), l("1")),
-                                random
+                    rep(
+                        singleRepeater,
+                        r(
+                            listOf(1, 1, 1),
+                            listOf(l("a"), l("b"), l("c")),
+                            random
+                        )
+                    ),
+                    rep(
+                        singleRepeater,
+                        c(
+                            mapOf(
+                                "first" to r(
+                                    listOf(1, 1),
+                                    listOf(l("0"), l("1")),
+                                    random
+                                ),
+                                "second" to r(
+                                    listOf(1, 1),
+                                    listOf(l("2"), l("3")),
+                                    random
+                                )
+                            ), concatCombiner
+                        )
+                    ),
+                    rep(
+                        singleRepeater,
+                        coll(
+                            rep(
+                                singleRepeater,
+                                l("x"),
                             ),
-                            "second" to r(
-                                listOf(1, 1),
-                                listOf(l("2"), l("3")),
-                                random
+                            rep(
+                                singleRepeater,
+                                l("y"),
+                            ),
+                            rep(
+                                singleRepeater,
+                                l("z"),
                             )
-                        ), concatCombiner
+                        )
                     ),
-                    coll(
-                        l("x"),
-                        l("y"),
-                        l("z")
-                    ),
-                    coll(
-                        l("inlineWithRepetition"),
-                        l("inlineWithRepetition"),
+                    rep(
+                        ConstantRepeater(3),
                         l("inlineWithRepetition")
                     )
                 )
@@ -435,10 +456,12 @@ class RandomTreeReaderKtTest : FreeSpec({
                 "referenceLeaf" to l("referenceLeaf"),
                 "referenceWithRepetition" to l("referenceWithRepetition"),
                 "collection" to coll(
-                    l("referenceLeaf"),
-                    coll(
-                        l("referenceWithRepetition"),
-                        l("referenceWithRepetition"),
+                    rep(
+                        singleRepeater,
+                        l("referenceLeaf")
+                    ),
+                    rep(
+                        ConstantRepeater(3),
                         l("referenceWithRepetition")
                     )
                 )
@@ -458,6 +481,8 @@ class RandomTreeReaderKtTest : FreeSpec({
                         - a
                         - 2 b
                         - c
+                    - 0-3 asdf
+                    - -4 without start
                     - 1d4 between 1-4
                     - d6 between 1-6
                     - 2d20 a lot
@@ -465,7 +490,10 @@ class RandomTreeReaderKtTest : FreeSpec({
 
             val expected = mapOf(
                 "collection" to coll(
-                    l("inlineLeaf"),
+                    rep(
+                        singleRepeater,
+                        l("inlineLeaf")
+                    ),
                     rep(
                         ConstantRepeater(4),
                         l("4elements")
@@ -473,21 +501,29 @@ class RandomTreeReaderKtTest : FreeSpec({
                     rep(
                         RangeRepeater(1..3, random),
                         r(
-                            listOf(1,2,3),
-                            listOf(l("a"),l("b"),l("c")),
+                            listOf(1, 2, 1),
+                            listOf(l("a"), l("b"), l("c")),
                             random
                         )
                     ),
                     rep(
-                        DiceRollRepeater(1 d 4),
+                        RangeRepeater(0..3, random),
+                        l("asdf")
+                    ),
+                    rep(
+                        RangeRepeater(1..4, random),
+                        l("without start")
+                    ),
+                    rep(
+                        DiceRollRepeater(DiceRoll.BaseDiceRoll(1, 4, random)),
                         l("between 1-4")
                     ),
                     rep(
-                        DiceRollRepeater(1 d 6),
+                        DiceRollRepeater(DiceRoll.BaseDiceRoll(1, 6, random)),
                         l("between 1-6")
                     ),
                     rep(
-                        DiceRollRepeater(2 d 20),
+                        DiceRollRepeater(DiceRoll.BaseDiceRoll(2, 20, random)),
                         l("a lot")
                     )
                 )
@@ -573,13 +609,13 @@ class RandomTreeReaderKtTest : FreeSpec({
                     listOf(4, 6),
                     listOf(
                         r(
-                            listOf(1,1,1),
-                            listOf(l("a"),l("b"),l("c")),
+                            listOf(1, 1, 1),
+                            listOf(l("a"), l("b"), l("c")),
                             random
                         ),
                         d(
-                            listOf(3,5,7),
-                            listOf(l("x"),l("y"),l("z")),
+                            listOf(3, 5, 7),
+                            listOf(l("x"), l("y"), l("z")),
                             random
                         )
                     ),
@@ -617,6 +653,21 @@ class RandomTreeReaderKtTest : FreeSpec({
             shouldThrow<Exception> {
                 readTreeFromString(input, identityMapper, concatCombiner, random)
             }.message shouldBe "Dice pool and int weights are mixed at: root."
+        }
+
+        "displays additional info if there are invalid weight types" {
+            val input = """
+                root:
+                  - d4 a
+                  - d6 b
+                  - c
+                  - -3 range
+                  - 2d20 etc
+            """.trimIndent()
+
+            shouldThrow<Exception> {
+                readTreeFromString(input, identityMapper, concatCombiner, random)
+            }.message shouldBe "Dice pool and int weights are mixed at: root. Additional invalid types found: RangeWeight"
         }
     }
 
